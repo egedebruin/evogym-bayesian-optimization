@@ -11,10 +11,11 @@ import config
 from individual import Individual
 from util import restart_population, writer
 import learn
+from util.logger_setup import logger, logger_setup
 
 def make_rng_seed():
 	seed = int(datetime.now().timestamp() * 1e6) % 2**32
-	print("Random Seed: ", seed)
+	logger.info("Random Seed: ", seed)
 	return np.random.Generator(np.random.PCG64(seed))
 
 def run_generation(individuals, rng):
@@ -57,12 +58,14 @@ def main():
 		read_args()
 	if not os.path.exists(config.FOLDER):
 		os.makedirs(config.FOLDER)
+	logger_setup()
+
 	start_time = time.time()
 	if os.path.exists(config.FOLDER + "populations.txt"):
 		population, num_generations = restart_population.get_population()
 		rng = restart_population.get_rng()
 	else:
-		print(f"Generation 0")
+		logger.info(f"Generation 0")
 		rng = make_rng_seed()
 		num_generations = 0
 		individuals = []
@@ -82,14 +85,14 @@ def main():
 	for i in range(number_of_generations):
 		if i < num_generations:
 			continue
-		print(f"Generation {i + 1}/{number_of_generations}")
+		logger.info(f"Generation {i + 1}/{number_of_generations}")
 		offspring = get_offspring(population, config.OFFSPRING_SIZE, i + 1, rng)
 		population += run_generation(offspring, rng)
 		population = sorted(population, key=lambda p: p.original_generation, reverse=True)[:config.POP_SIZE]
 		writer.write_to_populations_file(population)
 		writer.write_to_rng_file(rng)
 
-	print(f"Finished in {time.time() - start_time} seconds.")
+	logger.info(f"Finished in {time.time() - start_time} seconds.")
 
 if __name__ == '__main__':
 	main()
