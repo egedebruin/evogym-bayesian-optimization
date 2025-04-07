@@ -5,7 +5,7 @@ import numpy as np
 import config
 from robot.body import Body
 from robot.brain import Brain
-from individual import Individual
+from robot.individual import Individual
 
 
 def get_population():

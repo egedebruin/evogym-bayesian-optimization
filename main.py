@@ -8,7 +8,7 @@ from datetime import datetime
 from robot.body import Body
 from robot.brain import Brain
 import config
-from individual import Individual
+from robot.individual import Individual
 from util import restart_population, writer
 import learn
 from util.logger_setup import logger, logger_setup

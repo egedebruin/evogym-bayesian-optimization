@@ -1,6 +1,10 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import os
+import sys
 
+parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+sys.path.insert(0, parent_dir)
 import config
 
 individuals_file = open(config.FOLDER + "individuals.txt", "r")
