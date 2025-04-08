@@ -15,7 +15,7 @@ from util.logger_setup import logger, logger_setup
 
 def make_rng_seed():
 	seed = int(datetime.now().timestamp() * 1e6) % 2**32
-	logger.info("Random Seed: ", seed)
+	logger.info(f"Random Seed: {seed}")
 	return np.random.Generator(np.random.PCG64(seed))
 
 def run_generation(individuals, rng):
@@ -62,8 +62,10 @@ def main():
 
 	start_time = time.time()
 	if os.path.exists(config.FOLDER + "populations.txt"):
+		logger.info("Restarting populations...")
 		population, num_generations = restart_population.get_population()
 		rng = restart_population.get_rng()
+		logger.info("Restart succeeded")
 	else:
 		logger.info(f"Generation 0")
 		rng = make_rng_seed()

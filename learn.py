@@ -30,7 +30,12 @@ def learn(individual, rng):
 	robot_body = individual.body
 	brain = individual.brain
 	sim, viewer = world.build_world(robot_body.grid)
-	actuator_indices = sim.get_actuator_indices('robot')
+	try:
+		actuator_indices = sim.get_actuator_indices('robot')
+	except ValueError:
+		logger.error('Failed to get actuator indices')
+		logger.error(robot_body.grid)
+		return -math.inf, [], individual
 
 	optimizer = BayesianOptimization(
 		f=None,

@@ -124,7 +124,7 @@ class Body:
 
     @staticmethod
     def grid_is_ok(grid, max_size):
-        contains_action = True
+        contains_action = False
         for i in range(max_size):
             for j in range(max_size):
                 if grid[i][j] == 3.0 or grid[i][j] == 4.0:

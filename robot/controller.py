@@ -1,3 +1,4 @@
+import config
 import numpy as np
 
 class Controller:
@@ -8,14 +9,12 @@ class Controller:
         self.t = [0.0] * len(amplitudes)
 
     def control(self):
-        dt = 0.3
-
         result = []
         i = 0
         for amplitude, phase_offset, angular_offset in zip(self.amplitudes, self.phase_offsets, self.angular_offsets):
             target = amplitude * np.sin(self.t[i] + phase_offset) + 0.6 + angular_offset
             result.append(target)
 
-            self.t[i] += dt
+            self.t[i] += config.CONTROLLER_DT
             i += 1
         return np.array(result)
