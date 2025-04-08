@@ -42,11 +42,12 @@ def read_args():
 	parser = argparse.ArgumentParser()
 	parser.add_argument('--learn', help='Number learn generations.', required=True, type=int)
 	parser.add_argument('--inherit-samples', help='Number of samples to inherit.', required=True, type=int)
+	parser.add_argument('--repetition', help='Experiment number.', required=True, type=int)
 
 	args = parser.parse_args()
 	config.LEARN_GENERATIONS = args.learn
 	config.INHERIT_SAMPLES = args.inherit_samples
-	config.FOLDER = f"results/learn-{args.learn}_inherit-{args.inherit_samples}/"
+	config.FOLDER = f"results/learn-{args.learn}_inherit-{args.inherit_samples}_repetition-{args.repetition}/"
 
 def calculate_generations():
 	number_of_generations = int(config.FUNCTION_EVALUATIONS / (config.LEARN_GENERATIONS * config.OFFSPRING_SIZE))
