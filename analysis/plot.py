@@ -28,11 +28,20 @@ max_values = np.max(data_array, axis=1)
 mean_values = np.mean(data_array, axis=1)
 std_values = np.std(data_array, axis=1)
 
+max_so_far = []
+previous = 0
+for value in max_values:
+    best = max(value, previous)
+    max_so_far.append(best)
+    previous = best
+max_so_far = np.array(max_so_far)
+
 # Plot
 plt.figure(figsize=(8, 5))
-plt.plot(mean_values, label="Mean", marker='o')
-plt.fill_between(range(len(mean_values)), mean_values - std_values, mean_values + std_values, alpha=0.2)
-plt.plot(max_values, label="Max", marker='o')
+plt.plot(max_so_far, label="Max accumulated", marker='o', color='red')
+plt.plot(max_values, label="Max", marker='o', color='blue')
+plt.plot(mean_values, label="Mean", marker='o', color='green')
+plt.fill_between(range(len(mean_values)), mean_values - std_values, mean_values + std_values, alpha=0.2, color='green')
 plt.ylim(0, max(max_values) + 5)
 plt.xlabel("Generation")
 plt.ylabel("Objective value")

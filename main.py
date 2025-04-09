@@ -5,6 +5,7 @@ import os
 import time
 from datetime import datetime
 
+import selection
 from robot.body import Body
 from robot.brain import Brain
 import config
@@ -30,11 +31,10 @@ def run_generation(individuals, rng):
 	return new_population
 
 def get_offspring(population, offspring_size, generation_index, rng:np.random.Generator):
+	selected_individuals = selection.select(population, offspring_size, config.PARENT_SELECTION, rng, config.PARENT_POOL)
 	offspring = []
-	for i in range(offspring_size):
-		pool = rng.choice(population, config.PARENT_POOL)
-		chosen_individual = sorted(pool, key=lambda p: p.objective_value, reverse=True)[0]
-		new_individual = chosen_individual.generate_new_individual(generation_index, i, rng)
+	for i, individual in enumerate(selected_individuals):
+		new_individual = individual.generate_new_individual(generation_index, i, rng)
 		offspring.append(new_individual)
 	return offspring
 
@@ -45,12 +45,12 @@ def read_args():
 	parser.add_argument('--repetition', help='Experiment number.', required=True, type=int)
 
 	args = parser.parse_args()
-	config.LEARN_GENERATIONS = args.learn
+	config.LEARN_ITERATIONS = args.learn
 	config.INHERIT_SAMPLES = args.inherit_samples
 	config.FOLDER = f"results/learn-{args.learn}_inherit-{args.inherit_samples}_repetition-{args.repetition}/"
 
 def calculate_generations():
-	number_of_generations = int(config.FUNCTION_EVALUATIONS / (config.LEARN_GENERATIONS * config.OFFSPRING_SIZE))
+	number_of_generations = int(config.FUNCTION_EVALUATIONS / (config.LEARN_ITERATIONS * config.OFFSPRING_SIZE))
 	number_of_generations_initial_population = int(config.POP_SIZE / config.OFFSPRING_SIZE)
 	return number_of_generations - number_of_generations_initial_population
 
@@ -91,10 +91,7 @@ def main():
 		logger.info(f"Generation {i + 1}/{number_of_generations}")
 		offspring = get_offspring(population, config.OFFSPRING_SIZE, i + 1, rng)
 		population += run_generation(offspring, rng)
-		population = sorted(
-			population,
-			key=lambda ind: (-ind.original_generation, -ind.objective_value)
-		)[:config.POP_SIZE]
+		population = selection.select(population, config.POP_SIZE, config.SURVIVOR_SELECTION)
 		writer.write_to_populations_file(population)
 		writer.write_to_rng_file(rng)
 

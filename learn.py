@@ -59,7 +59,7 @@ def learn(individual, rng):
 
 	objective_value = -math.inf
 	experience = []
-	for bayesian_optimization_iteration in range(config.LEARN_GENERATIONS):
+	for bayesian_optimization_iteration in range(config.LEARN_ITERATIONS):
 		logger.info(f"Learn generation {bayesian_optimization_iteration + 1}")
 		if bayesian_optimization_iteration == 0 and (config.INHERIT_SAMPLES == -1 or config.INHERIT_SAMPLES == 0):
 			next_point = brain.to_next_point(actuator_indices)
