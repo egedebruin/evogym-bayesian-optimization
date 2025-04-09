@@ -52,7 +52,7 @@ class Body:
                         self.delete_mutation(rng)
                     success = True
 
-    def add_mutation(self, rng):
+    def add_mutation_deprecated(self, rng):
         max_size = self.grid.shape[0]
         success = False
         while not success:
@@ -67,6 +67,23 @@ class Body:
 
             (connection_x, connection_y) = rng.choice(possible_connections)
             self.grid[connection_x, connection_y] = float(rng.integers(1, 5))
+            success = True
+
+    def add_mutation(self, rng):
+        max_size = self.grid.shape[0]
+        success = False
+        while not success:
+            new_grid = np.copy(self.grid)
+            x = rng.integers(0, max_size)
+            y = rng.integers(0, max_size)
+            if new_grid[x][y] != 0.0:
+                continue
+
+            new_grid[x][y] = float(rng.integers(1, 5))
+            if not Body.grid_is_ok(new_grid, max_size):
+                continue
+
+            self.grid = new_grid
             success = True
 
     def delete_mutation(self, rng):
