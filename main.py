@@ -91,7 +91,10 @@ def main():
 		logger.info(f"Generation {i + 1}/{number_of_generations}")
 		offspring = get_offspring(population, config.OFFSPRING_SIZE, i + 1, rng)
 		population += run_generation(offspring, rng)
-		population = sorted(population, key=lambda p: p.original_generation, reverse=True)[:config.POP_SIZE]
+		population = sorted(
+			population,
+			key=lambda ind: (-ind.original_generation, -ind.objective_value)
+		)[:config.POP_SIZE]
 		writer.write_to_populations_file(population)
 		writer.write_to_rng_file(rng)
 
