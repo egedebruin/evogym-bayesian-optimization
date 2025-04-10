@@ -1,24 +1,38 @@
-def tournament(population, selection_size, pool_size, rng):
-    selection = []
-    for i in range(selection_size):
-        pool = rng.choice(population, pool_size)
-        selection.append(sorted(pool, key=lambda p: p.objective_value, reverse=True)[0])
-    return selection
+class Selection:
+    _selection_size: int
+    _mode: str
+    _extra_arguments: dict
 
-def simple(population, selection_size, mode):
-    if mode == 'generational':
-        key_func = lambda ind: (-ind.original_generation, -ind.objective_value)
-    elif mode == 'elitist':
-        key_func = lambda ind: -ind.objective_value
-    else:
-        raise ValueError(f"Unknown simple selection mode: {mode}")
+    def __init__(self, selection_size, mode, extra_arguments=None):
+        if extra_arguments is None:
+            extra_arguments = dict()
+        self._selection_size = selection_size
+        self._mode = mode
+        self._extra_arguments = extra_arguments
 
-    return sorted(population, key=key_func)[:selection_size]
+    def _tournament(self, population, rng):
+        if 'pool_size' not in self._extra_arguments:
+            raise ValueError('Extra argument pool_size is required for tournament selection')
+        selection = []
+        for i in range(self._selection_size):
+            pool = rng.choice(population, self._extra_arguments['pool_size'])
+            selection.append(sorted(pool, key=lambda p: p.objective_value, reverse=True)[0])
+        return selection
 
-def select(population, selection_size, mode, rng=None, pool_size=-1):
-    if mode == 'generational' or mode == 'elitist':
-        return simple(population, selection_size, mode)
-    elif mode == 'tournament':
-        return tournament(population, selection_size, pool_size, rng)
-    else:
-        raise ValueError(f"Unknown selection mode: {mode}")
+    def _simple(self, population):
+        if self._mode == 'generational':
+            key_func = lambda ind: (-ind.original_generation, -ind.objective_value)
+        elif self._mode == 'elitist':
+            key_func = lambda ind: -ind.objective_value
+        else:
+            raise ValueError(f"Unknown simple selection mode: {self._mode}")
+
+        return sorted(population, key=key_func)[:self._selection_size]
+
+    def select(self, population, rng):
+        if self._mode == 'generational' or self._mode == 'elitist':
+            return self._simple(population)
+        elif self._mode == 'tournament':
+            return self._tournament(population, rng)
+        else:
+            raise ValueError(f"Unknown selection mode: {self._mode}")

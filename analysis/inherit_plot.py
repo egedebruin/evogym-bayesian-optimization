@@ -31,7 +31,7 @@ for inherit in [-1, 0, 5]:
         for repetition in range(1, 21):
             data_array = plot.get_data(f'results/learn-{str(learn)}_inherit-{str(inherit)}_repetition-{str(repetition)}')
             if len(data_array) < generations:
-                print(learn, inherit, repetition)
+                print("There is something wrong with: ", learn, inherit, repetition)
                 continue
 
             max_values = np.max(data_array, axis=1)

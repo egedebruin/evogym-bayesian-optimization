@@ -10,6 +10,7 @@ from robot.body import Body
 from robot.brain import Brain
 import config
 from robot.individual import Individual
+from selection import Selection
 from util import restart_population, writer
 import learn
 from util.logger_setup import logger, logger_setup
@@ -30,8 +31,8 @@ def run_generation(individuals, rng):
 		i += 1
 	return new_population
 
-def get_offspring(population, offspring_size, generation_index, rng:np.random.Generator):
-	selected_individuals = selection.select(population, offspring_size, config.PARENT_SELECTION, rng, config.PARENT_POOL)
+def get_offspring(population, generation_index, parent_selection, rng:np.random.Generator):
+	selected_individuals = parent_selection.select(population, rng)
 	offspring = []
 	for i, individual in enumerate(selected_individuals):
 		new_individual = individual.generate_new_individual(generation_index, i, rng)
@@ -85,13 +86,15 @@ def main():
 
 	number_of_generations = calculate_generations()
 
+	parent_selection = Selection(config.OFFSPRING_SIZE, config.PARENT_SELECTION, {'pool_size': config.PARENT_POOL})
+	survivor_selection = Selection(config.POP_SIZE, config.SURVIVOR_SELECTION)
 	for i in range(number_of_generations):
 		if i < num_generations:
 			continue
 		logger.info(f"Generation {i + 1}/{number_of_generations}")
-		offspring = get_offspring(population, config.OFFSPRING_SIZE, i + 1, rng)
+		offspring = get_offspring(population, i + 1, parent_selection, rng)
 		population += run_generation(offspring, rng)
-		population = selection.select(population, config.POP_SIZE, config.SURVIVOR_SELECTION)
+		population = survivor_selection.select(population, rng)
 		writer.write_to_populations_file(population)
 		writer.write_to_rng_file(rng)
 

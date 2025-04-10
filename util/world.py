@@ -22,7 +22,7 @@ def build_world(robot_structure):
 def run_simulator(sim, controller, viewer, simulator_length, headless):
 	sim.reset()
 	start_position = np.mean(sim.object_pos_at_time(sim.get_time(), 'robot')[0])
-	for i in range(simulator_length):
+	for _ in range(simulator_length):
 		action = controller.control()
 		sim.set_action(
 			'robot',
