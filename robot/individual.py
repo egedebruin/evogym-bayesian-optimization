@@ -22,8 +22,7 @@ class Individual:
         self.inherited_experience = inherited_experience
 
     def add_restart_values(self, objective_value, experience, parent_id):
-        self.objective_value = objective_value
-        self.experience = experience
+        self.add_evaluation(objective_value, experience)
         self.parent_id = parent_id
 
     def add_evaluation(self, objective_value, experience):
