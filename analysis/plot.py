@@ -8,6 +8,8 @@ sys.path.insert(0, parent_dir)
 import config
 
 def get_data(folder):
+    if not os.path.isdir(folder):
+        return None
     individuals_file = open(folder + "/individuals.txt", "r")
     all_individuals = {individual.split(";")[0]: float(individual.split(";")[5]) for individual in individuals_file.read().splitlines()}
 
