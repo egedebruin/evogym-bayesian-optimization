@@ -12,7 +12,7 @@ class Controller:
         result = []
         i = 0
         for amplitude, phase_offset, angular_offset in zip(self.amplitudes, self.phase_offsets, self.angular_offsets):
-            target = amplitude * np.sin(self.t[i] + phase_offset) + 0.6 + angular_offset
+            target = np.clip(amplitude * np.sin(self.t[i] + phase_offset) + 1.1 + angular_offset, 0.6, 1.6)
             result.append(target)
 
             self.t[i] += config.CONTROLLER_DT

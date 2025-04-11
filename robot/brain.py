@@ -79,7 +79,7 @@ class Brain:
         angular_offsets = []
 
         for index in actuator_indices:
-            amplitudes.append(next_point['amplitude_' + str(index)])
+            amplitudes.append(next_point['amplitude_' + str(index)] * 0.5)
             phase_offsets.append(Brain.sin_cos_to_angle(
                 next_point['phase_offset_sin_' + str(index)] * 2 - 1,
                 next_point['phase_offset_cos_' + str(index)] * 2 - 1
