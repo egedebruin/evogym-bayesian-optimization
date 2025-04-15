@@ -1,6 +1,5 @@
 import numpy as np
 import os
-import time
 
 from robot.body import Body
 from robot.brain import Brain
@@ -53,7 +52,8 @@ def main():
 		num_generations = 0
 		individuals = []
 		for i in range(config.POP_SIZE):
-			body = Body(config.GRID_LENGTH, config.INITIAL_SIZE, rng)
+			body_size = rng.integers(config.MIN_INITIAL_SIZE, config.MAX_INITIAL_SIZE + 1)
+			body = Body(config.GRID_LENGTH, body_size, rng)
 			brain = Brain(config.GRID_LENGTH, rng)
 			individual_id = f"0-{i}"
 			individual = Individual(individual_id, body, brain, 0, [])
