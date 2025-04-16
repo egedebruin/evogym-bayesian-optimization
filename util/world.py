@@ -19,11 +19,15 @@ def build_world(robot_structure):
 
 	return sim, viewer
 
-def run_simulator(sim, controller, viewer, simulator_length, headless):
+def run_simulator(sim, controller, sensors, viewer, simulator_length, headless):
 	sim.reset()
 	start_position = np.mean(sim.object_pos_at_time(sim.get_time(), 'robot')[0])
 	for _ in range(simulator_length):
-		action = controller.control()
+		sensor_input = sensors.get_input_from_sensors(sim.object_pos_at_time(sim.get_time(), 'robot'),
+                                    sim.object_vel_at_time(sim.get_time(), 'robot'),
+                                    sim.get_actuator_indices('robot'),
+                                    sim.get_time())
+		action = controller.control(sensor_input)
 		sim.set_action(
 			'robot',
 			action

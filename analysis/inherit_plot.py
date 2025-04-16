@@ -36,6 +36,7 @@ to_color = {
     (5, 30): '#ff7f00'    # orange
 }
 
+max_x = []
 max_y = []
 
 for inherit in [-1, 0, 5]:
@@ -59,6 +60,8 @@ for inherit in [-1, 0, 5]:
             continue
 
         function_evals = np.arange(1, generations + 1) * learn * pop_size
+        generations = np.arange(0, generations)
+        x = function_evals
         mean_vals = np.mean(to_plot, axis=0)
         q25 = np.percentile(to_plot, 25, axis=0)
         q75 = np.percentile(to_plot, 75, axis=0)
@@ -66,11 +69,13 @@ for inherit in [-1, 0, 5]:
         label = to_label.get((inherit, learn), f"Inherit {inherit}, Learn {learn}")
         color = to_color.get((inherit, learn), 'gray')
 
-        ax.plot(function_evals, mean_vals, label=label, color=color)
-        ax.fill_between(function_evals, q25, q75, color=color, alpha=0.2)
+        ax.plot(x, mean_vals, label=label, color=color)
+        ax.fill_between(x, q25, q75, color=color, alpha=0.2)
+        max_x.append(np.max(x))
         max_y.append(np.max(q75) * 1.1)
 
 # Prettification
+ax.set_xlim(0, min(max_x))
 ax.set_ylim(0, max(max_y))
 ax.set_xlabel("Function evaluations")
 ax.set_ylabel("Objective value")

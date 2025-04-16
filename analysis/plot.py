@@ -10,6 +10,8 @@ import config
 def get_data(folder):
     if not os.path.isdir(folder):
         return None
+    if not os.path.isfile(os.path.join(folder, "individuals.txt")):
+        return None
     individuals_file = open(folder + "/individuals.txt", "r")
     all_individuals = {individual.split(";")[0]: float(individual.split(";")[5]) for individual in individuals_file.read().splitlines()}
 

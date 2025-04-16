@@ -6,9 +6,10 @@ from bayes_opt import BayesianOptimization, acquisition
 
 from sklearn.gaussian_process.kernels import Matern
 
-from robot.controller import Controller
-from robot.brain import Brain
+from robot.active import Brain
+from robot.active import Controller
 import config
+from robot.sensors import Sensors
 from util import world
 from util.logger_setup import logger
 
@@ -68,10 +69,11 @@ def learn(individual, rng):
 		else:
 			next_point = optimizer.suggest()
 
-		amplitudes, phase_offsets, angular_offsets = Brain.next_point_to_controller_values(next_point, actuator_indices)
-		controller = Controller(amplitudes, phase_offsets, angular_offsets)
+		args = Brain.next_point_to_controller_values(next_point, actuator_indices)
+		controller = Controller(args)
+		sensors = Sensors(robot_body.grid)
 
-		result = world.run_simulator(sim, controller, viewer, config.SIMULATION_LENGTH, True)
+		result = world.run_simulator(sim, controller, sensors, viewer, config.SIMULATION_LENGTH, True)
 		if result > objective_value:
 			objective_value = result
 

@@ -1,7 +1,7 @@
 from copy import deepcopy
 
 from robot.body import Body
-from robot.brain import Brain
+from robot.active import Brain
 
 
 class Individual:
@@ -30,7 +30,7 @@ class Individual:
         self.experience = experience
 
     def to_file_string(self):
-        return f"{self.id};{self.body.grid.tolist()};{self.brain.grid.tolist()};{self.experience};{self.parent_id};{self.objective_value};{self.original_generation}"
+        return f"{self.id};{self.body.grid.tolist()};{self.brain.to_string()};{self.experience};{self.parent_id};{self.objective_value};{self.original_generation}"
 
     def mutate(self, rng):
         self.body.mutate(rng)

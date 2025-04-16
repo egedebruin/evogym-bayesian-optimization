@@ -4,8 +4,8 @@ import numpy as np
 
 import config
 from robot.body import Body
-from robot.brain import Brain
-from robot.individual import Individual
+from robot.active import Brain
+from individual import Individual
 
 
 def get_population():
@@ -22,7 +22,7 @@ def get_population():
     population = []
     for individual_id in generations[-1].split(";")[:-1]:
         body_grid = np.array(ast.literal_eval(all_individuals[individual_id][0]))
-        brain_grid = np.array(ast.literal_eval(all_individuals[individual_id][1]))
+        brain_string = all_individuals[individual_id][1]
         experience = ast.literal_eval(all_individuals[individual_id][2])
         parent_id = str(all_individuals[individual_id][3])
         objective_value = float(all_individuals[individual_id][4])
@@ -31,7 +31,7 @@ def get_population():
         body = Body()
         body.replace_grid(body_grid)
         brain = Brain()
-        brain.replace_grid(brain_grid)
+        brain.replace_parameters(brain_string)
 
         individual = Individual(individual_id, body, brain, original_generation)
         individual.add_restart_values(objective_value, experience, parent_id)

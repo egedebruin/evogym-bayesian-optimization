@@ -2,9 +2,9 @@ import numpy as np
 import os
 
 from robot.body import Body
-from robot.brain import Brain
+from robot.active import Brain
 import config
-from robot.individual import Individual
+from individual import Individual
 from selection import Selection
 from util import restart_population, writer, start
 import learn
