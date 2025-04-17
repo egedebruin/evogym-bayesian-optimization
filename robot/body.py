@@ -52,23 +52,6 @@ class Body:
                         self.delete_mutation(rng)
                     success = True
 
-    def add_mutation_deprecated(self, rng):
-        max_size = self.grid.shape[0]
-        success = False
-        while not success:
-            x = rng.integers(0, max_size)
-            y = rng.integers(0, max_size)
-            if self.grid[x][y] == 0.0:
-                continue
-
-            possible_connections = self.get_connections(x, y, max_size)
-            if len(possible_connections) == 0:
-                continue
-
-            (connection_x, connection_y) = rng.choice(possible_connections)
-            self.grid[connection_x, connection_y] = float(rng.integers(1, 5))
-            success = True
-
     def add_mutation(self, rng):
         max_size = self.grid.shape[0]
         success = False
