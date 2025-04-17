@@ -6,7 +6,6 @@ from bayes_opt import BayesianOptimization, acquisition
 
 from sklearn.gaussian_process.kernels import Matern
 
-from robot.active import Brain
 from robot.active import Controller
 import config
 from robot.sensors import Sensors
@@ -40,7 +39,7 @@ def learn(individual, rng):
 
 	optimizer = BayesianOptimization(
 		f=None,
-		pbounds=Brain.get_p_bounds(actuator_indices),
+		pbounds=brain.get_p_bounds(actuator_indices),
 		allow_duplicate_points=True,
 		random_state=int(rng.integers(low=0, high=2 ** 32)),
 		acquisition_function=acquisition.UpperConfidenceBound(kappa=config.LEARN_KAPPA,
@@ -69,7 +68,7 @@ def learn(individual, rng):
 		else:
 			next_point = optimizer.suggest()
 
-		args = Brain.next_point_to_controller_values(next_point, actuator_indices)
+		args = brain.next_point_to_controller_values(next_point, actuator_indices)
 		controller = Controller(args)
 		sensors = Sensors(robot_body.grid)
 
