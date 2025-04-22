@@ -7,14 +7,18 @@ from robot.brain import Brain
 
 
 class BrainNN(Brain):
+    NUMBER_OF_INPUT_NEURONS = 28
+    NUMBER_OF_HIDDEN_NEURONS = 10
+    NUMBER_OF_OUTPUT_NEURONS = 1
+    
     weights: dict
     biases: dict
 
     def random_brain(self, max_size, rng):
-        self.weights = {'hidden': [rng.random() for _ in range(config.NN_NUMBER_OF_INPUT_NEURONS * config.NN_NUMBER_OF_HIDDEN_NEURONS)],
-                        'output': [rng.random() for _ in range(config.NN_NUMBER_OF_HIDDEN_NEURONS * config.NN_NUMBER_OF_OUTPUT_NEURONS)]}
+        self.weights = {'hidden': [rng.random() for _ in range(BrainNN.NUMBER_OF_INPUT_NEURONS * BrainNN.NUMBER_OF_HIDDEN_NEURONS)],
+                        'output': [rng.random() for _ in range(BrainNN.NUMBER_OF_HIDDEN_NEURONS * BrainNN.NUMBER_OF_OUTPUT_NEURONS)]}
 
-        self.biases = {'hidden': [rng.random() for _ in range(config.NN_NUMBER_OF_HIDDEN_NEURONS)], 'output': [rng.random() for _ in range(config.NN_NUMBER_OF_OUTPUT_NEURONS)]}
+        self.biases = {'hidden': [rng.random() for _ in range(BrainNN.NUMBER_OF_HIDDEN_NEURONS)], 'output': [rng.random() for _ in range(BrainNN.NUMBER_OF_OUTPUT_NEURONS)]}
 
     def replace_parameters(self, parameters_string):
         self.weights = ast.literal_eval(parameters_string.split('|')[0])
@@ -27,14 +31,14 @@ class BrainNN(Brain):
 
     def to_next_point(self, actuator_indices):
         next_point = {}
-        for i in range(config.NN_NUMBER_OF_HIDDEN_NEURONS):
+        for i in range(BrainNN.NUMBER_OF_HIDDEN_NEURONS):
             next_point['hidden-bias_' + str(i)] = self.biases['hidden'][i]
-            for j in range(config.NN_NUMBER_OF_INPUT_NEURONS):
+            for j in range(BrainNN.NUMBER_OF_INPUT_NEURONS):
                 next_point['hidden_' + str(j) + '_' + str(i)] = self.weights['hidden'][i * j + i]
 
-        for i in range(config.NN_NUMBER_OF_OUTPUT_NEURONS):
+        for i in range(BrainNN.NUMBER_OF_OUTPUT_NEURONS):
             next_point['output-bias_' + str(i)] = self.biases['output'][i]
-            for j in range(config.NN_NUMBER_OF_HIDDEN_NEURONS):
+            for j in range(BrainNN.NUMBER_OF_HIDDEN_NEURONS):
                 next_point['output_' + str(j) + '_' + str(i)] = self.weights['output'][i * j + i]
         return next_point
 
@@ -44,21 +48,21 @@ class BrainNN(Brain):
     @staticmethod
     def get_p_bounds(actuator_indices):
         pbounds = {}
-        for i in range(config.NN_NUMBER_OF_HIDDEN_NEURONS):
+        for i in range(BrainNN.NUMBER_OF_HIDDEN_NEURONS):
             pbounds['hidden-bias_' + str(i)] = (0, 1)
-            for j in range(config.NN_NUMBER_OF_INPUT_NEURONS):
+            for j in range(BrainNN.NUMBER_OF_INPUT_NEURONS):
                 pbounds['hidden_' + str(j) + '_' + str(i)] = (0, 1)
 
-        for i in range(config.NN_NUMBER_OF_OUTPUT_NEURONS):
+        for i in range(BrainNN.NUMBER_OF_OUTPUT_NEURONS):
             pbounds['output-bias_' + str(i)] = (0, 1)
-            for j in range(config.NN_NUMBER_OF_HIDDEN_NEURONS):
+            for j in range(BrainNN.NUMBER_OF_HIDDEN_NEURONS):
                 pbounds['output_' + str(j) + '_' + str(i)] = (0, 1)
         return pbounds
 
     @staticmethod
     def next_point_to_controller_values(next_point, actuator_indices):
-        args = {'hidden_weights': np.zeros(shape=(config.NN_NUMBER_OF_INPUT_NEURONS, config.NN_NUMBER_OF_HIDDEN_NEURONS)), 'hidden_biases': np.zeros(shape=(1, config.NN_NUMBER_OF_HIDDEN_NEURONS)),
-                'output_weights': np.zeros(shape=(config.NN_NUMBER_OF_HIDDEN_NEURONS, config.NN_NUMBER_OF_OUTPUT_NEURONS)), 'output_biases': np.zeros(shape=(1, config.NN_NUMBER_OF_OUTPUT_NEURONS))}
+        args = {'hidden_weights': np.zeros(shape=(BrainNN.NUMBER_OF_INPUT_NEURONS, BrainNN.NUMBER_OF_HIDDEN_NEURONS)), 'hidden_biases': np.zeros(shape=(1, BrainNN.NUMBER_OF_HIDDEN_NEURONS)),
+                'output_weights': np.zeros(shape=(BrainNN.NUMBER_OF_HIDDEN_NEURONS, BrainNN.NUMBER_OF_OUTPUT_NEURONS)), 'output_biases': np.zeros(shape=(1, BrainNN.NUMBER_OF_OUTPUT_NEURONS))}
 
         for key, value in next_point.items():
             if 'hidden-bias' in key:

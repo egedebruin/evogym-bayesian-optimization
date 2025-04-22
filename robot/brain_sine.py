@@ -7,15 +7,16 @@ from robot.brain import Brain
 
 
 class BrainSine(Brain):
+    NUMBER_OF_CONTROLLER_VALUES = 4
 
     grid: np.array
 
     def random_brain(self, max_size, rng):
-        self.grid = np.full((max_size, max_size, config.SINE_NUMBER_OF_CONTROLLER_VALUES), 0.0)
+        self.grid = np.full((max_size, max_size, BrainSine.NUMBER_OF_CONTROLLER_VALUES), 0.0)
 
         for i in range(max_size):
             for j in range(max_size):
-                for k in range(config.SINE_NUMBER_OF_CONTROLLER_VALUES):
+                for k in range(BrainSine.NUMBER_OF_CONTROLLER_VALUES):
                     self.grid[i, j, k] = rng.random()
 
     def replace_parameters(self, parameters_string):
@@ -25,7 +26,7 @@ class BrainSine(Brain):
         max_size = self.grid.shape[0]
         for i in range(max_size):
             for j in range(max_size):
-                for k in range(config.SINE_NUMBER_OF_CONTROLLER_VALUES):
+                for k in range(BrainSine.NUMBER_OF_CONTROLLER_VALUES):
                     self.grid[i, j, k] = np.clip(self.grid[i, j, k] + rng.normal(loc=0, scale=config.MUTATION_STD), 0, 1)
 
     def to_next_point(self, actuator_indices):
