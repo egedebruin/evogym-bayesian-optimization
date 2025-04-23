@@ -15,23 +15,25 @@ def build_world(robot_structure):
 	EvoSim._has_displayed_version = True
 	sim = EvoSim(world)
 	viewer = EvoViewer(sim)
-	viewer.track_objects('ground')
+	viewer.track_objects('robot')
 
 	return sim, viewer
 
 def run_simulator(sim, controller, sensors, viewer, simulator_length, headless):
 	sim.reset()
 	start_position = np.mean(sim.object_pos_at_time(sim.get_time(), 'robot')[0])
-	for _ in range(simulator_length):
-		sensor_input = sensors.get_input_from_sensors(sim.object_pos_at_time(sim.get_time(), 'robot'),
-                                    sim.object_vel_at_time(sim.get_time(), 'robot'),
-                                    sim.get_actuator_indices('robot'),
-                                    sim.get_time())
-		action = controller.control(sensor_input)
-		sim.set_action(
-			'robot',
-			action
-		)
+
+	for simulation_step in range(simulator_length):
+		if simulation_step % 5 == 0:
+			sensor_input = sensors.get_input_from_sensors(sim.object_pos_at_time(sim.get_time(), 'robot'),
+										sim.object_vel_at_time(sim.get_time(), 'robot'),
+										sim.get_actuator_indices('robot'),
+										sim.get_time())
+			action = controller.control(sensor_input)
+			sim.set_action(
+				'robot',
+				action
+			)
 		sim.step()
 		if not headless:
 			viewer.render('screen')

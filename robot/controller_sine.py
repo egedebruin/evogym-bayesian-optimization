@@ -5,6 +5,8 @@ from robot.controller import Controller
 
 class ControllerSine(Controller):
 
+    DT = 0.5
+
     def __init__(self, args):
         self.amplitudes = args['amplitudes']
         self.phase_offsets = args['phase_offsets']
@@ -18,6 +20,6 @@ class ControllerSine(Controller):
             target = np.clip(amplitude * np.sin(self.t[i] + phase_offset) + 1.1 + angular_offset, 0.6, 1.6)
             result.append(target)
 
-            self.t[i] += config.CONTROLLER_DT
+            self.t[i] += ControllerSine.DT
             i += 1
         return np.array(result)

@@ -7,7 +7,7 @@ parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 sys.path.insert(0, parent_dir)
 import config
 
-def get_data(folder):
+def get_data(folder, max_generations = -1):
     if not os.path.isdir(folder):
         return None
     if not os.path.isfile(os.path.join(folder, "individuals.txt")):
@@ -19,7 +19,11 @@ def get_data(folder):
     generations = populations_file.read().splitlines()
 
     objective_values_per_generation = []
+    i = 1
     for generation in generations:
+        if max_generations != -1 and i > max_generations:
+            break
+        i += 1
         generation_objective_values = []
         for individual in generation.split(";")[:-1]:
             generation_objective_values.append(all_individuals[individual])
