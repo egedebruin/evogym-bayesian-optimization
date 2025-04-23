@@ -1,4 +1,5 @@
 import numpy as np
+from scipy.special import expit
 
 from robot.controller import Controller
 
@@ -25,8 +26,4 @@ class ControllerNN(Controller):
 
     @staticmethod
     def sigmoid(x):
-        return np.where(
-            x >= 0,
-            1 / (1 + np.exp(-x)),
-            np.exp(x) / (1 + np.exp(x))
-        )
+        return expit(x)
