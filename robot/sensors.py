@@ -4,7 +4,7 @@ from typing import Any
 
 import numpy as np
 
-import config
+from configs import config
 
 class Sensors:
     sensor_grid_to_sensor_index: dict

@@ -7,7 +7,7 @@ from bayes_opt import BayesianOptimization, acquisition
 from sklearn.gaussian_process.kernels import Matern
 
 from robot.active import Controller
-import config
+from configs import config
 from robot.sensors import Sensors
 from util import world
 from util.logger_setup import logger

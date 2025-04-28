@@ -2,7 +2,7 @@ import ast
 
 import numpy as np
 
-import config
+from configs import config
 from robot.brain import Brain
 
 

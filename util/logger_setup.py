@@ -2,7 +2,7 @@ import logging
 import os
 import sys
 
-import config
+from configs import config
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)

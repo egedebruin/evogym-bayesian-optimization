@@ -5,7 +5,7 @@ import sys
 
 parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 sys.path.insert(0, parent_dir)
-import config
+from configs import config
 
 def get_data(folder, max_generations = -1):
     if not os.path.isdir(folder):

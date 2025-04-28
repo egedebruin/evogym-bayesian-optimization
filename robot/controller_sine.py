@@ -1,4 +1,3 @@
-import config
 import numpy as np
 
 from robot.controller import Controller

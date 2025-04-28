@@ -3,7 +3,7 @@ import os
 
 from robot.body import Body
 from robot.active import Brain
-import config
+from configs import config
 from individual import Individual
 from selection import Selection
 from util import restart_population, writer, start

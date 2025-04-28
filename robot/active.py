@@ -1,4 +1,4 @@
-import config
+from configs import config
 
 if config.CONTROLLER_TYPE == 'nn':
     from robot.brain_nn import BrainNN as Brain

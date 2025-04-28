@@ -3,7 +3,7 @@ from datetime import datetime
 
 import numpy as np
 
-import config
+from configs import config
 from util.logger_setup import logger
 
 

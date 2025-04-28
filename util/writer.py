@@ -1,6 +1,6 @@
 import numpy as np
 
-import config
+from configs import config
 
 def write_to_individuals_file(individual):
     with open(config.FOLDER + "individuals.txt", "a") as file:
