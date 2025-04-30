@@ -19,8 +19,8 @@ def read_args():
 	config.LEARN_ITERATIONS = args.learn
 	config.INHERIT_SAMPLES = args.inherit_samples
 	config.CONTROLLER_TYPE = args.controller
-	config.ENVIRONMENT = args.environments
-	config.FOLDER = f"results/learn-{args.learn}_inherit-{args.inherit_samples}_repetition-{args.repetition}_controller-{args.controller}_env-{args.environment}/"
+	config.ENVIRONMENT = args.environment
+	config.FOLDER = f"results/learn-{args.learn}_inherit-{args.inherit_samples}_repetition-{args.repetition}/"
 
 def make_rng_seed():
 	seed = int(datetime.now().timestamp() * 1e6) % 2**32

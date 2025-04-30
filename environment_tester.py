@@ -71,7 +71,7 @@ def learn(rng, body, learn_iterations):
     )
     optimizer.set_gp_params(
         kernel=Matern(nu=config.LEARN_NU, length_scale=config.LEARN_LENGTH_SCALE, length_scale_bounds="fixed"))
-    optimizer.set_gp_params(alpha=1e-10)
+    optimizer.set_gp_params(alpha=config.LEARN_ALPHA)
 
     for bayesian_optimization_iteration in range(learn_iterations):
         print(f"Learn generation {bayesian_optimization_iteration + 1}")
