@@ -40,14 +40,17 @@ max_x = []
 max_y = []
 
 for inherit in [-1, 0, 5]:
-    for generations, learn in [(2500, 1), (60, 30)]:
+    for generations, learn in [(2000, 1), (60, 30)]:
         if learn == 1 and inherit != -1:
             continue
+        extra_folder = ''
+        if learn == 1:
+            extra_folder = '/random'
         print(f"Plotting for inherit {inherit} and learn {learn}")
 
         to_plot = []
         for repetition in range(1, 21):
-            data_array = plot.get_data(f'results/new/learn-{learn}_inherit-{inherit}_repetition-{repetition}', generations)
+            data_array = plot.get_data(f'results/new{extra_folder}/learn-{learn}_inherit-{inherit}_repetition-{repetition}', generations)
             if data_array is None or len(data_array) < generations:
                 print("Incomplete data for:", learn, inherit, repetition, len(data_array) if data_array is not None else "None")
                 continue
