@@ -14,13 +14,23 @@ def read_args():
 	parser.add_argument('--controller', help='Type of controller', required=True, type=str)
 	parser.add_argument('--repetition', help='Experiment number.', required=True, type=int)
 	parser.add_argument('--environment', help='Environment', required=True, type=str)
+	parser.add_argument('--inherit-alpha', help='Alpha for inherited parameters', required=False, type=float)
+	parser.add_argument('--kappa', help='Kappa for UCB', required=False, type=float)
 
 	args = parser.parse_args()
 	config.LEARN_ITERATIONS = args.learn
 	config.INHERIT_SAMPLES = args.inherit_samples
 	config.CONTROLLER_TYPE = args.controller
 	config.ENVIRONMENT = args.environment
-	config.FOLDER = f"results/learn-{args.learn}_inherit-{args.inherit_samples}_repetition-{args.repetition}/"
+
+	extra = ''
+	if args.inherit_alpha:
+		config.LEARN_INHERITED_ALPHA = args.inherit_alpha
+		extra += "_alpha-" + str(args.inherit_alpha)
+	if args.kappa:
+		config.LEARN_KAPPA = args.kappa
+		extra += "_kappa-" + str(args.kappa)
+	config.FOLDER = f"results/learn-{args.learn}_inherit-{args.inherit_samples}{extra}_repetition-{args.repetition}/"
 
 def make_rng_seed():
 	seed = int(datetime.now().timestamp() * 1e6) % 2**32
