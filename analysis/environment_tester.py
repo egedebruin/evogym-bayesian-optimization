@@ -1,7 +1,13 @@
 import concurrent.futures
+import os
+import sys
+
 from bayes_opt import BayesianOptimization, acquisition
 from sklearn.gaussian_process.kernels import Matern
 import pandas as pd
+
+parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+sys.path.insert(0, parent_dir)
 
 from configs import config
 from robot.body import Body
