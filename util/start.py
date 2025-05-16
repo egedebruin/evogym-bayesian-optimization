@@ -11,7 +11,6 @@ def read_args():
 	parser = argparse.ArgumentParser()
 	parser.add_argument('--learn', help='Number learn generations.', required=True, type=int)
 	parser.add_argument('--inherit-samples', help='Number of samples to inherit.', required=True, type=int)
-	parser.add_argument('--controller', help='Type of controller', required=True, type=str)
 	parser.add_argument('--repetition', help='Experiment number.', required=True, type=int)
 	parser.add_argument('--environment', help='Environment', required=True, type=str)
 	parser.add_argument('--inherit-alpha', help='Alpha for inherited parameters', required=False, type=float)
@@ -20,7 +19,6 @@ def read_args():
 	args = parser.parse_args()
 	config.LEARN_ITERATIONS = args.learn
 	config.INHERIT_SAMPLES = args.inherit_samples
-	config.CONTROLLER_TYPE = args.controller
 	config.ENVIRONMENT = args.environment
 
 	extra = ''
