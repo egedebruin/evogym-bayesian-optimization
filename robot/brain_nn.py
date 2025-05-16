@@ -29,6 +29,10 @@ class BrainNN(Brain):
             for i in range(len(key_weights)):
                 self.weights[key][i] = np.clip(key_weights[i] + rng.normal(loc=0, scale=config.MUTATION_STD), 0, 1)
 
+        for key, key_biases in self.biases.items():
+            for i in range(len(key_biases)):
+                self.biases[key][i] = np.clip(key_biases[i] + rng.normal(loc=0, scale=config.MUTATION_STD), 0, 1)
+
     def to_next_point(self, actuator_indices):
         next_point = {}
         for i in range(BrainNN.NUMBER_OF_HIDDEN_NEURONS):
