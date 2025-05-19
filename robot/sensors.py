@@ -60,11 +60,11 @@ class Sensors:
             contact = detect_ground_contact(robot_positions, ground_positions, self.voxel_index_to_sensor_index, [actuator_index])
             # sensor_input = np.concatenate((sensor_input, [1.0 if contact else 0.0]))
 
-            if config.ENVIRONMENT == 'carry':
+            if config.ENVIRONMENT == 'carry' or config.ENVIRONMENT == 'catch':
                 # Distance-to-package sensor
                 package_positions = sim.object_pos_at_time(sim.get_time(), 'package')
                 package_input = self._get_input_package(actuator_index, robot_positions, package_positions)
-                # sensor_input = np.concatenate((sensor_input, package_input))
+                sensor_input = np.concatenate((sensor_input, package_input))
 
             # Time sensor
             input_vectors.append(np.concatenate((sensor_input, [current_time % 25])))
