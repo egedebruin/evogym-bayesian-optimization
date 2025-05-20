@@ -8,6 +8,7 @@ sys.path.insert(0, parent_dir)
 from configs import config
 
 from util import world
+from util import start
 from robot.active import Brain
 from robot.active import Controller
 from robot.sensors import Sensors
@@ -19,7 +20,7 @@ sorted_individuals = sorted(all_individuals, key=lambda individual: float(indivi
 best_individual = sorted_individuals[0]
 
 grid = np.array(ast.literal_eval(best_individual[1]))
-sim, viewer = world.build_world(grid)
+sim, viewer = world.build_world(grid, start.make_rng_seed())
 
 experience = ast.literal_eval(best_individual[3])
 best_brain = sorted(experience, key=lambda evaluation: float(evaluation[1]), reverse=True)[0][0]

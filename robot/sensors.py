@@ -96,8 +96,8 @@ class Sensors:
             for package_index in range(len(package_positions[0])):
                 package_sensor_position = (package_positions[0][package_index], package_positions[1][package_index])
 
-                x_distance = abs(robot_sensor_position[0] - package_sensor_position[0])
-                y_distance = abs(robot_sensor_position[1] - package_sensor_position[1])
+                x_distance = package_sensor_position[0] - robot_sensor_position[0]
+                y_distance = package_sensor_position[1] - robot_sensor_position[1]
 
                 if x_distance < minimum_x_distance:
                     minimum_x_distance = x_distance

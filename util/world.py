@@ -5,18 +5,19 @@ from evogym import EvoWorld, EvoSim, EvoViewer, utils, WorldObject
 
 from configs import config
 
-def build_world(robot_structure):
+def build_world(robot_structure, rng):
 	env = get_environment()
 	world = EvoWorld.from_json(os.path.join('worlds', env))
+	x, y = start_position_robot()
 	world.add_from_array(
 		name='robot',
 		structure=robot_structure,
-		x=12,
-		y=1,
+		x=x,
+		y=y,
 		connections=utils.get_full_connectivity(robot_structure)
 	)
 
-	world = add_extra_attributes(world)
+	world = add_extra_attributes(world, rng)
 	EvoSim._has_displayed_version = True
 	sim = EvoSim(world)
 	viewer = EvoViewer(sim)
@@ -49,6 +50,11 @@ def run_simulator(sim, controller, sensors, viewer, simulator_length, headless):
 	return calculate_objective_value(start_position, end_position, extra_metrics)
 
 # Below are Environment specific things
+def start_position_robot():
+	if config.ENVIRONMENT == 'catch':
+		return 16, 1
+	return 1, 1
+
 def get_environment():
 	if config.ENVIRONMENT == 'simple' or config.ENVIRONMENT == 'jump' or config.ENVIRONMENT == 'catch':
 		env = 'simple_environment.json'
@@ -70,26 +76,23 @@ def tracker(viewer):
 	else:
 		viewer.track_objects('robot')
 
-def add_extra_attributes(world):
+def add_extra_attributes(world, rng):
 	if config.ENVIRONMENT == 'catch':
-		# self.offsetx = random.randint(-6, 4)
-		# self.offsety = random.randint(0, 5)
-
-		offsetx = 0
-		offsety = 0
+		offset_x = int(rng.integers(-6, 5)) # NOTE: This is always the same per generation
+		offset_y = int(rng.integers(0, 6))
 
 		package = WorldObject.from_json(os.path.join('worlds', 'package.json'))
-		package.set_pos(6, 41)
+		package.set_pos(10 + offset_x, 41 + offset_y)
 		package.rename('package')
 		world.add_object(package)
 
 		peg1 = WorldObject.from_json(os.path.join('worlds', 'peg.json'))
-		peg1.set_pos(2, 39)
+		peg1.set_pos(6 + offset_x, 39 + offset_y)
 		peg1.rename('peg1')
 		world.add_object(peg1)
 
 		peg2 = WorldObject.from_json(os.path.join('worlds', 'peg.json'))
-		peg2.set_pos(4, 25)
+		peg2.set_pos(8 + offset_x, 25 + offset_y)
 		peg2.rename('peg2')
 		world.add_object(peg2)
 

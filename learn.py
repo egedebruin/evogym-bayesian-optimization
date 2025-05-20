@@ -29,7 +29,7 @@ def learn_individuals(individuals, rng):
 def learn(individual, rng):
 	robot_body = individual.body
 	brain = individual.brain
-	sim, viewer = world.build_world(robot_body.grid)
+	sim, viewer = world.build_world(robot_body.grid, rng)
 	try:
 		actuator_indices = sim.get_actuator_indices('robot')
 	except ValueError:

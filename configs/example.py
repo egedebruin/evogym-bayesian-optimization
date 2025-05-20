@@ -1,4 +1,4 @@
-FOLDER = 'results/test'
+FOLDER = 'results/test/'
 
 READ_ARGS = True
 LEARN_ITERATIONS = 10
