@@ -10,9 +10,12 @@ from configs import config
 from util import world
 from util import start
 from robot.active import Brain
+from robot.brain_nn import BrainNN
 from robot.active import Controller
 from robot.sensors import Sensors
+from main import set_number_of_sensors
 
+set_number_of_sensors()
 file = open(config.FOLDER + "individuals.txt", "r")
 all_individuals = file.read().splitlines()
 all_individuals = [individual.split(";") for individual in all_individuals]

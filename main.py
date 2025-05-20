@@ -3,6 +3,7 @@ import os
 
 from robot.body import Body
 from robot.active import Brain
+from robot.brain_nn import BrainNN
 from configs import config
 from individual import Individual
 from selection import Selection
@@ -34,12 +35,17 @@ def calculate_generations():
 	number_of_generations_initial_population = int(config.POP_SIZE / config.OFFSPRING_SIZE)
 	return number_of_generations - number_of_generations_initial_population
 
+def set_number_of_sensors():
+	if config.ENVIRONMENT == 'carry' or config.ENVIRONMENT == 'catch':
+		BrainNN.NUMBER_OF_INPUT_NEURONS = BrainNN.NUMBER_OF_INPUT_NEURONS + 2
+
 def main():
 	if config.READ_ARGS:
 		start.read_args()
 	if not os.path.exists(config.FOLDER):
 		os.makedirs(config.FOLDER)
 	logger_setup()
+	set_number_of_sensors()
 
 	if os.path.exists(config.FOLDER + "populations.txt"):
 		logger.info("Restarting populations...")

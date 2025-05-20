@@ -28,7 +28,7 @@ def read_args():
 	if args.kappa:
 		config.LEARN_KAPPA = args.kappa
 		extra += "_kappa-" + str(args.kappa)
-	config.FOLDER = f"results/learn-{args.learn}_inherit-{args.inherit_samples}{extra}_repetition-{args.repetition}/"
+	config.FOLDER = f"results/learn-{args.learn}_inherit-{args.inherit_samples}_environment-{args.environment}{extra}_repetition-{args.repetition}/"
 
 def make_rng_seed():
 	seed = int(datetime.now().timestamp() * 1e6) % 2**32
