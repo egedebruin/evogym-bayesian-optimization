@@ -2,60 +2,70 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 from matplotlib import rcParams
+import plot  # Assumes you have a module `plot` with `get_data`
 
-import plot
+# Constants
+POP_SIZE = 200
+EVALS_PER_GEN = 30
+REPETITIONS = 20
+GENERATIONS = 80
 
-pop_size = 200
-to_label = {
+LABELS = {
     (-1, 1, False): 'Evolution only',
     (-1, 1, True): 'Evolution only - Random',
     (-1, 30, False): 'Learn - No inheritance',
     (0, 30, False): 'Learn - Inherit samples',
     (5, 30, False): 'Learn - Reevaluate'
 }
-to_color = {
+
+COLORS = {
     (-1, 1, False): '#e41a1c',  # red
     (-1, 1, True): '#000000',  # black
     (-1, 30, False): '#377eb8',  # blue
     (0, 30, False): '#4daf4a',  # green
-    (5, 30, False): '#ff7f00'  # orange
+    (5, 30, False): '#ff7f00'   # orange
 }
 
-def make_the_plot(inherit, generations, environment, ax, max_x, max_y):
-    print(f"Plotting for inherit {inherit}")
 
-    to_plot = []
-    for repetition in range(1, 21):
-        data_array = plot.get_data(f'results/learn-30_inherit-{inherit}_environment-{environment}_repetition-{repetition}',
-                                   generations)
-        if data_array is None or len(data_array) < generations:
-            print("Incomplete data for:", inherit, environment, repetition,
-                  len(data_array) if data_array is not None else "None")
+def make_the_plot(inherit, environment, ax, max_x, max_y):
+    print(f"Plotting: inherit={inherit}, environment={environment}")
+
+    curves = []
+    for repetition in range(1, REPETITIONS + 1):
+        data_path = f'results/learn-30_inherit-{inherit}_environment-{environment}_repetition-{repetition}'
+        data_array = plot.get_data(data_path, GENERATIONS)
+
+        if data_array is None or len(data_array) < GENERATIONS:
+            print(f"  Skipping: incomplete data (rep {repetition})")
             continue
 
-        max_values = np.max(data_array, axis=1)
-        max_so_far = np.maximum.accumulate(max_values)
-        to_plot.append(max_so_far)
+        max_vals = np.max(data_array, axis=1)
+        running_max = np.maximum.accumulate(max_vals)
+        curves.append(running_max)
 
-    if len(to_plot) == 0:
+    if not curves:
+        print(f"  No data to plot for inherit={inherit}, env={environment}")
         return
 
-    function_evals = np.arange(1, generations + 1) * 30 * pop_size
-    x = function_evals
-    mean_vals = np.mean(to_plot, axis=0)
-    q25 = np.percentile(to_plot, 25, axis=0)
-    q75 = np.percentile(to_plot, 75, axis=0)
+    x_vals = np.arange(1, GENERATIONS + 1) * EVALS_PER_GEN * POP_SIZE
+    curves = np.array(curves)
 
-    label = to_label.get((inherit, 30, False), f"Inherit {inherit}")
-    color = to_color.get((inherit, 30, False), 'gray')
+    mean_vals = np.mean(curves, axis=0)
+    q25 = np.percentile(curves, 25, axis=0)
+    q75 = np.percentile(curves, 75, axis=0)
 
-    ax.plot(x, mean_vals, label=label, color=color)
-    ax.fill_between(x, q25, q75, color=color, alpha=0.2)
-    max_x.append(np.max(x))
+    label = LABELS.get((inherit, 30, False), f"Inherit {inherit}")
+    color = COLORS.get((inherit, 30, False), 'gray')
+
+    ax.plot(x_vals, mean_vals, label=label, color=color)
+    ax.fill_between(x_vals, q25, q75, color=color, alpha=0.2)
+
+    max_x.append(x_vals[-1])
     max_y.append(np.max(q75) * 1.1)
 
+
 def main():
-    # Set global styles for beauty
+    # Style
     sns.set_theme(style="whitegrid")
     rcParams.update({
         "font.family": "serif",
@@ -69,38 +79,41 @@ def main():
         "lines.linewidth": 2.5
     })
 
-    # Plot setup
-    fig, ax = plt.subplots(ncols=3, figsize=(11, 6.5))
+    environments = ['carry', 'catch']
+    fig, axes = plt.subplots(ncols=2, figsize=(12, 6.5), sharey=True)
+    fig.subplots_adjust(top=0.85)
+    max_x, max_y = [], []
 
-    max_x = []
-    max_y = []
-
-    generations = 80
-    for i, environment in enumerate(['simple', 'carry', 'catch']):
+    for i, env in enumerate(environments):
+        ax = axes[i]
         for inherit in [-1, 0, 5]:
-            make_the_plot(inherit, generations, environment, ax[i], max_x, max_y)
+            make_the_plot(inherit, env, ax, max_x, max_y)
 
-        # Prettification
-        ax[i].set_xlim(0, min(max_x))
-        ax[i].set_ylim(0, max(max_y))
-        ax[i].set_xlabel("Function evaluations")
-        ax[i].set_ylabel("Objective value")
-        ax[i].set_title("Max performance averaged over repetitions", pad=20, weight='bold')
+        ax.set_xlim(0, max(max_x))
+        ax.set_ylim(0, max(max_y))
+        ax.set_xlabel("Function evaluations")
+        if i == 0:
+            ax.set_ylabel("Objective value")
 
-        # Style tweaks
-        ax[i].spines["top"].set_visible(False)
-        ax[i].spines["right"].set_visible(False)
-        ax[i].spines["left"].set_linewidth(1.2)
-        ax[i].spines["bottom"].set_linewidth(1.2)
+        # Add nice title for each subplot
+        ax.set_title(f"Environment: {env.capitalize()}", weight='bold', pad=15)
 
-        ax[i].grid(True, which='major', linestyle='--', alpha=0.4)
-        ax[i].legend(frameon=False, title="Strategy", loc="lower right")
+        # Plot appearance
+        ax.spines["top"].set_visible(False)
+        ax.spines["right"].set_visible(False)
+        ax.spines["left"].set_linewidth(1.2)
+        ax.spines["bottom"].set_linewidth(1.2)
+        ax.grid(True, which='major', linestyle='--', alpha=0.4)
+        ax.set_facecolor('#f9f9f9')
+        ax.legend(frameon=False, title="Strategy", loc="lower right")
 
-        # Add a light background panel
-        ax[i].set_facecolor('#f9f9f9')
+    # Global title
+    fig.suptitle("Max Performance over Generations", fontsize=18, weight='bold')
+    fig.tight_layout(rect=[0, 0, 1, 0.93])
     fig.patch.set_facecolor('white')
-    fig.tight_layout()
-    plt.savefig('plot.pdf')
+    plt.savefig("plot.pdf")
+    plt.show()
+
 
 if __name__ == '__main__':
     main()
