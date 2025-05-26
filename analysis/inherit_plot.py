@@ -5,7 +5,7 @@ from matplotlib import rcParams
 
 import plot
 
-pop_size = 100
+pop_size = 200
 to_label = {
     (-1, 1, False): 'Evolution only',
     (-1, 1, True): 'Evolution only - Random',
@@ -21,15 +21,15 @@ to_color = {
     (5, 30, False): '#ff7f00'  # orange
 }
 
-def make_the_plot(learn, inherit, generations, extra_folder, ax, max_x, max_y):
-    print(f"Plotting for inherit {inherit} and learn {learn}")
+def make_the_plot(inherit, generations, environment, ax, max_x, max_y):
+    print(f"Plotting for inherit {inherit}")
 
     to_plot = []
     for repetition in range(1, 21):
-        data_array = plot.get_data(f'results/nn{extra_folder}/learn-{learn}_inherit-{inherit}_repetition-{repetition}',
+        data_array = plot.get_data(f'results/learn-30_inherit-{inherit}_environment-{environment}_repetition-{repetition}',
                                    generations)
         if data_array is None or len(data_array) < generations:
-            print("Incomplete data for:", learn, inherit, repetition,
+            print("Incomplete data for:", inherit, environment, repetition,
                   len(data_array) if data_array is not None else "None")
             continue
 
@@ -40,15 +40,14 @@ def make_the_plot(learn, inherit, generations, extra_folder, ax, max_x, max_y):
     if len(to_plot) == 0:
         return
 
-    function_evals = np.arange(1, generations + 1) * learn * pop_size
-    generations = np.arange(0, generations)
+    function_evals = np.arange(1, generations + 1) * 30 * pop_size
     x = function_evals
     mean_vals = np.mean(to_plot, axis=0)
     q25 = np.percentile(to_plot, 25, axis=0)
     q75 = np.percentile(to_plot, 75, axis=0)
 
-    label = to_label.get((inherit, learn, extra_folder == '/random'), f"Inherit {inherit}, Learn {learn}")
-    color = to_color.get((inherit, learn, extra_folder == '/random'), 'gray')
+    label = to_label.get((inherit, 30, False), f"Inherit {inherit}")
+    color = to_color.get((inherit, 30, False), 'gray')
 
     ax.plot(x, mean_vals, label=label, color=color)
     ax.fill_between(x, q25, q75, color=color, alpha=0.2)
@@ -71,42 +70,37 @@ def main():
     })
 
     # Plot setup
-    fig, ax = plt.subplots(figsize=(11, 6.5))
+    fig, ax = plt.subplots(ncols=3, figsize=(11, 6.5))
 
     max_x = []
     max_y = []
 
-    for inherit in [-1, 0, 5]:
-        for generations, learn in [(2000, 1), (66, 30)]:
-            if learn == 1 and inherit != -1:
-                continue
-            extra_folder = ''
-            make_the_plot(learn, inherit, generations, extra_folder, ax, max_x, max_y)
-            if learn == 1:
-                extra_folder = '/random'
-                make_the_plot(learn, inherit, generations, extra_folder, ax, max_x, max_y)
+    generations = 80
+    for i, environment in enumerate(['simple', 'carry', 'catch']):
+        for inherit in [-1, 0, 5]:
+            make_the_plot(inherit, generations, environment, ax[i], max_x, max_y)
 
-    # Prettification
-    ax.set_xlim(0, min(max_x))
-    ax.set_ylim(0, max(max_y))
-    ax.set_xlabel("Function evaluations")
-    ax.set_ylabel("Objective value")
-    ax.set_title("Max performance averaged over repetitions", pad=20, weight='bold')
+        # Prettification
+        ax[i].set_xlim(0, min(max_x))
+        ax[i].set_ylim(0, max(max_y))
+        ax[i].set_xlabel("Function evaluations")
+        ax[i].set_ylabel("Objective value")
+        ax[i].set_title("Max performance averaged over repetitions", pad=20, weight='bold')
 
-    # Style tweaks
-    ax.spines["top"].set_visible(False)
-    ax.spines["right"].set_visible(False)
-    ax.spines["left"].set_linewidth(1.2)
-    ax.spines["bottom"].set_linewidth(1.2)
+        # Style tweaks
+        ax[i].spines["top"].set_visible(False)
+        ax[i].spines["right"].set_visible(False)
+        ax[i].spines["left"].set_linewidth(1.2)
+        ax[i].spines["bottom"].set_linewidth(1.2)
 
-    ax.grid(True, which='major', linestyle='--', alpha=0.4)
-    ax.legend(frameon=False, title="Strategy", loc="lower right")
+        ax[i].grid(True, which='major', linestyle='--', alpha=0.4)
+        ax[i].legend(frameon=False, title="Strategy", loc="lower right")
 
-    # Add a light background panel
-    ax.set_facecolor('#f9f9f9')
+        # Add a light background panel
+        ax[i].set_facecolor('#f9f9f9')
     fig.patch.set_facecolor('white')
     fig.tight_layout()
-    plt.show()
+    plt.savefig('plot.pdf')
 
 if __name__ == '__main__':
     main()
