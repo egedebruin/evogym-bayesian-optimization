@@ -46,6 +46,7 @@ def learn_quickly(bo_brain, bo_grid, bo_rng, bo_sim, bo_viewer):
         bo_sensors = Sensors(bo_grid)
 
         bo_result = world.run_simulator(bo_sim, bo_controller, bo_sensors, bo_viewer, config.SIMULATION_LENGTH, True)
+        print(bo_result)
         if bo_result > objective_value:
             objective_value = bo_result
             best_brain = bo_args
@@ -55,7 +56,7 @@ def learn_quickly(bo_brain, bo_grid, bo_rng, bo_sim, bo_viewer):
     return best_brain
 
 def main():
-    best_individual = run_best.get_best_individual(30)
+    best_individual = run_best.get_best_individual(75)
     rng = start.make_rng_seed()
     grid = np.array(ast.literal_eval(best_individual[1]))
     brain = Brain(config.GRID_LENGTH, rng)

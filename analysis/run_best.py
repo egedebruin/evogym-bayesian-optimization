@@ -16,17 +16,28 @@ from main import set_number_of_sensors
 
 def get_best_individual(min_generation=0):
     set_number_of_sensors()
-    file = open(config.FOLDER + "individuals.txt", "r")
-    all_individuals = file.read().splitlines()
-    all_individuals = [individual.split(";") for individual in all_individuals]
-    correct_individuals = []
-    for individual in all_individuals:
-        if int(individual[0].split("-")[0]) < min_generation:
-            continue
-        correct_individuals.append(individual)
-    sorted_individuals = sorted(correct_individuals, key=lambda individual: float(individual[5]), reverse=True)
-    result_individual = sorted_individuals[0]
-    return result_individual
+    best_individual = None
+    best_fitness = float("-inf")
+
+    with open(config.FOLDER + "individuals.txt", "r") as file:
+        for line in file:
+            if not line.strip():
+                continue  # Skip empty lines
+            individual = line.strip().split(";")
+            try:
+                generation = int(individual[0].split("-")[0])
+                fitness = float(individual[5])
+            except (IndexError, ValueError) as e:
+                print(f"Skipping malformed line: {line.strip()} — {e}")
+                continue
+            if generation < min_generation:
+                continue
+            if fitness > best_fitness:
+                best_fitness = fitness
+                best_individual = individual
+
+    return best_individual
+
 
 def main():
     best_individual = get_best_individual()
@@ -35,8 +46,8 @@ def main():
     sim, viewer = world.build_world(grid, start.make_rng_seed())
 
     experience = ast.literal_eval(best_individual[3])
-    best_brain = sorted(experience, key=lambda evaluation: float(evaluation[1]), reverse=True)[0][0]
-    args = Brain.next_point_to_controller_values(best_brain, sim.get_actuator_indices('robot'))
+    # best_brain = sorted(experience, key=lambda evaluation: float(evaluation[1]), reverse=True)[0][0]
+    args = Brain.next_point_to_controller_values(experience, sim.get_actuator_indices('robot'))
 
     controller = Controller(args)
     sensors = Sensors(grid)
