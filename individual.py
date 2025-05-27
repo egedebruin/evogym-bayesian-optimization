@@ -10,6 +10,7 @@ class Individual:
     brain: Brain
     experience: list[tuple]
     inherited_experience: list[tuple]
+    best_brain: dict
     objective_value: float
     original_generation: int
     parent_id: str = "-1"
@@ -21,16 +22,20 @@ class Individual:
         self.original_generation = original_generation
         self.inherited_experience = inherited_experience
 
-    def add_restart_values(self, objective_value, experience, parent_id):
-        self.add_evaluation(objective_value, experience)
+    def add_restart_values(self, objective_value, best_brain, experience, parent_id):
+        self.add_evaluation(objective_value, best_brain, experience)
         self.parent_id = parent_id
 
-    def add_evaluation(self, objective_value, experience):
+    def add_evaluation(self, objective_value, best_brain, experience):
         self.objective_value = objective_value
+        self.best_brain = best_brain
         self.experience = experience
 
     def to_file_string(self):
-        return f"{self.id};{self.body.grid.tolist()};{self.brain.to_string()};{self.experience};{self.parent_id};{self.objective_value};{self.original_generation}"
+        return f"{self.id};{self.body.grid.tolist()};{self.brain.to_string()};{self.best_brain};{self.parent_id};{self.objective_value};{self.original_generation}"
+
+    def to_experience_string(self):
+        return f"{self.id};{self.experience}"
 
     def mutate(self, rng):
         self.body.mutate(rng)

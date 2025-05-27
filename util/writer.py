@@ -11,6 +11,9 @@ def write_to_populations_file(population):
         for individual in population:
             file.write(f"{individual.id};")
         file.write("\n")
+    with open(config.FOLDER + "experience.txt", "w") as file:
+        for individual in population:
+            file.write(f"{individual.to_experience_string()}\n")
 
 def write_to_rng_file(rng):
     rng_state = rng.bit_generator.state

@@ -58,6 +58,7 @@ def learn(individual, rng):
 			optimizer.set_gp_params(alpha=alphas)
 
 	objective_value = -math.inf
+	best_brain = None
 	experience = []
 	for bayesian_optimization_iteration in range(config.LEARN_ITERATIONS):
 		logger.info(f"Learn generation {bayesian_optimization_iteration + 1}")
@@ -75,6 +76,7 @@ def learn(individual, rng):
 		result = world.run_simulator(sim, controller, sensors, viewer, config.SIMULATION_LENGTH, True)
 		if result > objective_value:
 			objective_value = result
+			best_brain = next_point
 
 		alphas = np.append(alphas, config.LEARN_ALPHA)
 		optimizer.register(params=next_point, target=result)
@@ -82,4 +84,4 @@ def learn(individual, rng):
 		experience.append((next_point, objective_value))
 	sim.reset()
 	viewer.close()
-	return objective_value, experience, individual
+	return objective_value, best_brain, experience, individual
