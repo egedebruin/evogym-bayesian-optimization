@@ -107,8 +107,8 @@ def calculate_objective_value(start_position, end_position, extra_metrics):
 		return np.max(extra_metrics)
 	elif config.ENVIRONMENT == 'carry' or config.ENVIRONMENT == 'catch':
 		if np.min(extra_metrics[1][1]) < 1.5:
-			return 0.0
-		return np.mean(extra_metrics[1][0] - np.mean(extra_metrics[0][0]))
+			return -abs(np.mean(extra_metrics[1][0]) - np.mean(end_position[0]))
+		return np.mean(extra_metrics[1][0]) - np.mean(extra_metrics[0][0])
 	else:
 		raise ValueError(f"Environment {config.ENVIRONMENT} does not exist.")
 
