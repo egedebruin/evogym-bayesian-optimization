@@ -37,6 +37,7 @@ def main():
 
     # Calculate mean and standard deviation along the rows
     max_values = np.max(data_array, axis=1)
+    min_values = np.min(data_array, axis=1)
     mean_values = np.mean(data_array, axis=1)
     q25 = np.percentile(data_array, 25, axis=1)
     q75 = np.percentile(data_array, 75, axis=1)
@@ -55,7 +56,7 @@ def main():
     plt.plot(max_values, label="Max", marker='o', color='blue')
     plt.plot(mean_values, label="Mean", marker='o', color='green')
     plt.fill_between(range(len(mean_values)), q25, q75, alpha=0.2, color='green')
-    plt.ylim(0, max(max_values) + 5)
+    plt.ylim(min(min(min_values) - 5, 0), max(max_values) + 5)
     plt.xlabel("Generation")
     plt.ylabel("Objective value")
     plt.legend()

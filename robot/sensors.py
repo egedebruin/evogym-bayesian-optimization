@@ -99,9 +99,9 @@ class Sensors:
                 x_distance = package_sensor_position[0] - robot_sensor_position[0]
                 y_distance = package_sensor_position[1] - robot_sensor_position[1]
 
-                if x_distance < minimum_x_distance:
+                if abs(x_distance) < abs(minimum_x_distance):
                     minimum_x_distance = x_distance
-                if y_distance < minimum_y_distance:
+                if abs(y_distance) < abs(minimum_y_distance):
                     minimum_y_distance = y_distance
         return np.array([minimum_x_distance, minimum_y_distance])
 
