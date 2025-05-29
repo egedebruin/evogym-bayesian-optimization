@@ -27,6 +27,7 @@ def get_offspring(population, generation_index, parent_selection, rng:np.random.
 	offspring = []
 	for i, individual in enumerate(selected_individuals):
 		new_individual = individual.generate_new_individual(generation_index, i, rng)
+		new_individual.inherit_experience(population, individual, rng)
 		offspring.append(new_individual)
 	return offspring
 

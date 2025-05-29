@@ -1,5 +1,6 @@
 from copy import deepcopy
 
+from configs import config
 from robot.body import Body
 from robot.active import Brain
 
@@ -44,8 +45,29 @@ class Individual:
     def generate_new_individual(self, generation_index, offspring_id, rng):
         new_individual = deepcopy(self)
         new_individual.mutate(rng)
-        new_individual.inherited_experience = self.experience
         new_individual.parent_id = self.id
         new_individual.id = f"{generation_index}-{offspring_id}"
         new_individual.original_generation = generation_index
         return new_individual
+
+    def inherit_experience(self, population, parent, rng):
+        self.inherited_experience = []
+        if config.INHERIT_TYPE == 'parent':
+            selected_individuals = [parent]
+        elif config.INHERIT_TYPE == 'best':
+            selected_individuals = sorted(population, key=lambda ind: -ind.objective_value)[:config.SOCIAL_POOL]
+        elif config.INHERIT_TYPE == 'random':
+            selected_individuals = rng.choice(population, size=config.SOCIAL_POOL, replace=False).tolist()
+        elif config.INHERIT_TYPE == 'none':
+            return
+        else:
+            raise ValueError(f"Unknown INHERIT TYPE: {config.INHERIT_TYPE}")
+
+        pre_sorted_experiences = [
+            sorted(ind.experience, key=lambda x: x[1], reverse=True)
+            for ind in selected_individuals
+        ]
+        for i in range(config.LEARN_ITERATIONS):
+            for j in range(config.SOCIAL_POOL):
+                self.inherited_experience.append(pre_sorted_experiences[j][i])
+                # TODO: Deal with same-samples-problem

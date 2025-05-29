@@ -47,8 +47,7 @@ def learn(individual, rng):
 	)
 	optimizer.set_gp_params(kernel=Matern(nu=config.LEARN_NU, length_scale=config.LEARN_LENGTH_SCALE, length_scale_bounds="fixed"))
 
-	inherited_experience = sorted(individual.inherited_experience, key=lambda x: x[1], reverse=True)
-	inherited_experience = brain.update_experience_with_actuator_indices(inherited_experience, actuator_indices)
+	inherited_experience = brain.update_experience_with_actuator_indices(individual.inherited_experience, actuator_indices)
 
 	alphas = np.array([])
 	if config.INHERIT_SAMPLES == 0:

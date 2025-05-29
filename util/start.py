@@ -13,6 +13,8 @@ def read_args():
 	parser.add_argument('--inherit-samples', help='Number of samples to inherit.', required=True, type=int)
 	parser.add_argument('--repetition', help='Experiment number.', required=True, type=int)
 	parser.add_argument('--environment', help='Environment', required=True, type=str)
+	parser.add_argument('--inherit-type', help='Inheritance type', required=True, type=str)
+	parser.add_argument('--social-pool', help='Pool of robots to inherit', required=True, type=int)
 	parser.add_argument('--inherit-alpha', help='Alpha for inherited parameters', required=False, type=float)
 	parser.add_argument('--kappa', help='Kappa for UCB', required=False, type=float)
 
@@ -20,6 +22,8 @@ def read_args():
 	config.LEARN_ITERATIONS = args.learn
 	config.INHERIT_SAMPLES = args.inherit_samples
 	config.ENVIRONMENT = args.environment
+	config.INHERIT_TYPE = args.inherit_type
+	config.SOCIAL_POOL = args.social_pool
 
 	extra = ''
 	if args.inherit_alpha:
@@ -28,7 +32,7 @@ def read_args():
 	if args.kappa:
 		config.LEARN_KAPPA = args.kappa
 		extra += "_kappa-" + str(args.kappa)
-	config.FOLDER = f"results/learn-{args.learn}_inherit-{args.inherit_samples}_environment-{args.environment}{extra}_repetition-{args.repetition}/"
+	config.FOLDER = f"results/learn-{args.learn}_inherit-{args.inherit_samples}_type-{args.inherit_type}_pool-{args.social_pool}_environment-{args.environment}{extra}_repetition-{args.repetition}/"
 
 def make_rng_seed():
 	seed = int(datetime.now().timestamp() * 1e6) % 2**32
