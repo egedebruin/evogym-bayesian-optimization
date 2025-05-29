@@ -69,5 +69,7 @@ class Individual:
         ]
         for i in range(config.LEARN_ITERATIONS):
             for j in range(config.SOCIAL_POOL):
-                self.inherited_experience.append(pre_sorted_experiences[j][i])
+                if pre_sorted_experiences[j][i] not in self.inherited_experience:
+                    self.inherited_experience.append(pre_sorted_experiences[j][i])
                 # TODO: Deal with same-samples-problem
+                # TODO: For now we skip the similar samples and continue
