@@ -80,7 +80,7 @@ def learn(individual, rng):
 		alphas = np.append(alphas, config.LEARN_ALPHA)
 		optimizer.register(params=next_point, target=result)
 		optimizer.set_gp_params(alpha=alphas)
-		experience.append((next_point, objective_value))
+		experience.append((next_point, result))
 	sim.reset()
 	viewer.close()
 	return objective_value, best_brain, experience, individual

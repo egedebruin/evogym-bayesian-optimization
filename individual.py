@@ -1,5 +1,7 @@
 from copy import deepcopy
 
+import numpy as np
+
 from configs import config
 from robot.body import Body
 from robot.active import Brain
@@ -58,6 +60,8 @@ class Individual:
             selected_individuals = sorted(population, key=lambda ind: -ind.objective_value)[:config.SOCIAL_POOL]
         elif config.INHERIT_TYPE == 'random':
             selected_individuals = rng.choice(population, size=config.SOCIAL_POOL, replace=False).tolist()
+        elif config.INHERIT_TYPE == 'similar':
+            selected_individuals = sorted(population, key=lambda ind: Individual.hamming_distance(self.body.grid, ind.body.grid))[:config.SOCIAL_POOL]
         elif config.INHERIT_TYPE == 'none':
             return
         else:
@@ -73,3 +77,36 @@ class Individual:
                     self.inherited_experience.append(pre_sorted_experiences[j][i])
                 # TODO: Deal with same-samples-problem
                 # TODO: For now we skip the similar samples and continue, so we do end up with INHERIT_SAMPLES samples to reevaluate
+
+    @staticmethod
+    def hamming_distance(A, B):
+        A = np.array(A)
+        B = np.array(B)
+
+        min_dist = np.inf
+        A_non_zero = np.count_nonzero(A)
+        B_non_zero = np.count_nonzero(B)
+        for dx_a in range(-config.GRID_LENGTH + 1, config.GRID_LENGTH):
+            for dy_a in range(-config.GRID_LENGTH + 1, config.GRID_LENGTH):
+                for dx_b in range(-config.GRID_LENGTH + 1, config.GRID_LENGTH):
+                    for dy_b in range(-config.GRID_LENGTH + 1, config.GRID_LENGTH):
+                        A_shift_non_zero = 0
+                        B_shift_non_zero = 0
+                        dist = 0
+                        for i in range(A.shape[0]):
+                            for j in range(A.shape[1]):
+                                x_a, y_a = i + dx_a, j + dy_a
+                                x_b, y_b = i + dx_b, j + dy_b
+                                a_val = A[
+                                    x_a, y_a] if 0 <= x_a < config.GRID_LENGTH and 0 <= y_a < config.GRID_LENGTH else 0
+                                b_val = B[
+                                    x_b, y_b] if 0 <= x_b < config.GRID_LENGTH and 0 <= y_b < config.GRID_LENGTH else 0
+
+                                if a_val != b_val:
+                                    dist += 1
+                                A_shift_non_zero += a_val != 0.0
+                                B_shift_non_zero += b_val != 0.0
+                        if A_non_zero == A_shift_non_zero and B_non_zero == B_shift_non_zero:
+                            min_dist = min(min_dist, dist)
+
+        return min_dist

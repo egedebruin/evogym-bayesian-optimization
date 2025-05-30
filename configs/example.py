@@ -4,7 +4,7 @@ READ_ARGS = True
 LEARN_ITERATIONS = 10
 INHERIT_SAMPLES = 2 # from -1 to LEARN_ITERATIONS
 ENVIRONMENT = 'simple'
-INHERIT_TYPE = 'best' # parent, random, none or best
+INHERIT_TYPE = 'best' # parent, random, none, similar or best
 SOCIAL_POOL = 8
 
 LEARN_INHERITED_ALPHA = 2
