@@ -1,6 +1,7 @@
 from copy import deepcopy
 
 import numpy as np
+from scipy.ndimage import shift
 
 from configs import config
 from robot.body import Body
@@ -82,31 +83,33 @@ class Individual:
     def hamming_distance(A, B):
         A = np.array(A)
         B = np.array(B)
+        gl = config.GRID_LENGTH
 
-        min_dist = np.inf
         A_non_zero = np.count_nonzero(A)
         B_non_zero = np.count_nonzero(B)
-        for dx_a in range(-config.GRID_LENGTH + 1, config.GRID_LENGTH):
-            for dy_a in range(-config.GRID_LENGTH + 1, config.GRID_LENGTH):
-                for dx_b in range(-config.GRID_LENGTH + 1, config.GRID_LENGTH):
-                    for dy_b in range(-config.GRID_LENGTH + 1, config.GRID_LENGTH):
-                        A_shift_non_zero = 0
-                        B_shift_non_zero = 0
-                        dist = 0
-                        for i in range(A.shape[0]):
-                            for j in range(A.shape[1]):
-                                x_a, y_a = i + dx_a, j + dy_a
-                                x_b, y_b = i + dx_b, j + dy_b
-                                a_val = A[
-                                    x_a, y_a] if 0 <= x_a < config.GRID_LENGTH and 0 <= y_a < config.GRID_LENGTH else 0
-                                b_val = B[
-                                    x_b, y_b] if 0 <= x_b < config.GRID_LENGTH and 0 <= y_b < config.GRID_LENGTH else 0
 
-                                if a_val != b_val:
-                                    dist += 1
-                                A_shift_non_zero += a_val != 0.0
-                                B_shift_non_zero += b_val != 0.0
-                        if A_non_zero == A_shift_non_zero and B_non_zero == B_shift_non_zero:
-                            min_dist = min(min_dist, dist)
+        min_dist = np.inf
+        shifts = range(-gl + 1, gl)
+
+        for dx_a in shifts:
+            A_shifted = shift(A, shift=(dx_a, 0), order=0, cval=0)
+            for dy_a in shifts:
+                A_final = shift(A_shifted, shift=(0, dy_a), order=0, cval=0)
+
+                A_nz = np.count_nonzero(A_final)
+                if A_nz != A_non_zero:
+                    continue
+
+                for dx_b in shifts:
+                    B_shifted = shift(B, shift=(dx_b, 0), order=0, cval=0)
+                    for dy_b in shifts:
+                        B_final = shift(B_shifted, shift=(0, dy_b), order=0, cval=0)
+
+                        B_nz = np.count_nonzero(B_final)
+                        if B_nz != B_non_zero:
+                            continue
+
+                        dist = np.count_nonzero(A_final != B_final)
+                        min_dist = min(min_dist, dist)
 
         return min_dist
