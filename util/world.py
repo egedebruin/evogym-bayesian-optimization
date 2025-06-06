@@ -47,12 +47,10 @@ def run_simulator(sim, controller, sensors, viewer, simulator_length, headless):
 				action
 			)
 			previous_position = sim.object_pos_at_time(sim.get_time(), 'robot')
-		if simulation_step % 5 == 4:
-			new_sensor_input = sensors.get_input_from_sensors(sim)
-			next_sensor_inputs = [new_sensor_input]
-			reward = np.mean(sim.object_pos_at_time(sim.get_time(), 'robot')[1]) - np.mean(previous_position[1])
-			rewards = [reward]
-			controller.update(np.array(sensor_inputs), np.array(raw_actions), np.array(rewards), np.array(next_sensor_inputs))
+		if simulation_step % 5 == 1:
+			reward = np.mean(sim.object_pos_at_time(sim.get_time(), 'robot')[0]) - np.mean(previous_position[0])
+			if simulation_step < 5000:
+				controller.update(np.array(sensor_inputs), np.array(raw_actions), np.array([reward]), np.array([sensors.get_input_from_sensors(sim)]))
 		sim.step()
 		if not headless:
 			viewer.render('screen')
