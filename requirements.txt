@@ -11,3 +11,8 @@ scikit-learn==1.6.1
 scipy==1.15.3
 threadpoolctl==3.6.0
 typing_extensions==4.13.2
+torch~=2.7.1
+matplotlib~=3.10.1
+seaborn~=0.13.2
+pandas~=2.2.3
+scikit-learn-extra~=0.3.0
