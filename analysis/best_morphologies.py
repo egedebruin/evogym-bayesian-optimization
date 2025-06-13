@@ -1,11 +1,16 @@
 import ast
 import concurrent.futures
 import math
+import os
+import sys
 
 import numpy as np
 from bayes_opt import BayesianOptimization, acquisition
 from sklearn.gaussian_process.kernels import Matern
 import pandas as pd
+
+parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+sys.path.insert(0, parent_dir)
 
 from configs import config
 from robot.active import Brain
@@ -13,30 +18,49 @@ from robot.active import Controller
 from robot.sensors import Sensors
 from util import start, world
 
+LABELS = {
+    (-1, 'none', 0): 'Individual learning',
+    (0, 'parent', 1): 'Inherit Samples',
+    (8, 'parent', 1): 'Social learning - Parent',
+    (8, 'best', 1): 'Social learning - Best - N=1',
+    (8, 'best', 8): 'Social learning - Best - N=8',
+    (8, 'random', 1): 'Social learning - Random - N=1',
+    (8, 'random', 8): 'Social learning - Random - N=8',
+    (8, 'similar', 1): 'Social learning - Similar - N=1',
+    (8, 'similar', 8): 'Social learning - Similar - N=8',
+}
+
+SUB_FOLDER = 'baseline'
+EVALS_PER_GEN = 50
+ENVIRONMENT = 'simple'
+
 def main():
     rng = start.make_rng_seed()
     result_dict = {
-        'n_learn': [],
         'inherit': [],
+        'type': [],
+        'pool': [],
         'repetition': [],
         'objective_value': []
     }
 
-    for n_learn, inherit in [(1, -1), (30, -1), (30, 0), (30, 5)]:
-        result = parallelize(n_learn, inherit, 500, rng)
+    strategy_keys = list(LABELS.keys())
+
+    for key in strategy_keys:
+        result = parallelize(key[0], key[1], key[2], 500, rng)
         for repetition in range(len(result)):
-            result_dict['n_learn'].append(n_learn)
-            result_dict['inherit'].append(inherit)
+            result_dict['inherit'].append(key[0])
+            result_dict['type'].append(key[1])
+            result_dict['pool'].append(key[2])
             result_dict['repetition'].append(repetition + 1)
             result_dict['objective_value'].append(result[repetition])
 
     pd.DataFrame(result_dict).to_csv('../results/best_morphologies_results.csv', index=False)
 
-def parallelize(n_learn, inherit, learn_iterations, rng):
+def parallelize(inherit, i_type, pool, learn_iterations, rng):
     grids = []
-    for repetition in range(1, 21):
-        print(f"Repetition {repetition}")
-        folder = f'results/new/learn-{n_learn}_inherit-{inherit}_repetition-{repetition}'
+    for repetition in range(1, 6):
+        folder = f'results/learn-{EVALS_PER_GEN}_inherit-{inherit}_type-{i_type}_pool-{pool}_environment-{ENVIRONMENT}_repetition-{repetition}/'
         best_fitness = float('-inf')
         best_grid = None
 
@@ -55,7 +79,7 @@ def parallelize(n_learn, inherit, learn_iterations, rng):
             grids.append(best_grid)
 
     with concurrent.futures.ProcessPoolExecutor(
-            max_workers=20
+            max_workers=5
     ) as executor:
         futures = []
         for grid in grids:
@@ -69,7 +93,7 @@ def parallelize(n_learn, inherit, learn_iterations, rng):
 def learn(grid, learn_iterations, rng):
     brain = Brain(config.GRID_LENGTH, rng)
 
-    sim, viewer = world.build_world(grid)
+    sim, viewer = world.build_world(grid, rng)
     actuator_indices = sim.get_actuator_indices('robot')
     optimizer = BayesianOptimization(
         f=None,
