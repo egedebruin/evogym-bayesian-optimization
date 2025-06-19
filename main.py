@@ -15,8 +15,8 @@ def run_generation(individuals, rng):
 	new_population = []
 	results = learn.learn_individuals(individuals, rng)
 	i = 0
-	for (objective_value, best_brain, experience, individual) in results:
-		individual.add_evaluation(objective_value, best_brain, experience)
+	for (objective_value, best_brain, experience, best_inherited_brain, individual) in results:
+		individual.add_evaluation(objective_value, best_brain, experience, best_inherited_brain)
 		new_population.append(individual)
 		writer.write_to_individuals_file(individual)
 		i += 1
