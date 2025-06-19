@@ -8,7 +8,6 @@ import plot  # Assumes you have a module `plot` with `get_data`
 POP_SIZE = 200
 EVALS_PER_GEN = 50
 REPETITIONS = 5
-GENERATIONS = 30
 SUB_FOLDER = 'baseline'
 
 LABELS = {
@@ -36,19 +35,22 @@ COLORS = {
 }
 
 LINE_STYLES = {
-    (0, 'parent', 1): '-',
     (-1, 'none', 0): '--',
     (8, 'best', 1): ':',
     (8, 'best', 8): ':',
+    (0, 'parent', 1): '-',
     (8, 'parent', 1): '-',
     (8, 'random', 1): '-.',
     (8, 'random', 8): '-.',
-    (8, 'similar', 1): 'loosely dotted',
-    (8, 'similar', 8): 'loosely dotted',
+    (8, 'similar', 1): (0, (3, 1, 1, 1)),
+    (8, 'similar', 8): (0, (3, 1, 1, 1)),
 }
 
 
 def make_the_plot(inherit, inherit_type, inherit_pool, environment, ax):
+    GENERATIONS = 60
+    if environment == 'catch':
+        GENERATIONS = 30
     key = (inherit, inherit_type, inherit_pool)
     label = LABELS.get(key)
     color = COLORS.get(key)
@@ -62,14 +64,14 @@ def make_the_plot(inherit, inherit_type, inherit_pool, environment, ax):
         data_array = plot.get_data(data_path, GENERATIONS)
 
         if data_array is None or len(data_array) < GENERATIONS:
-            print(f'No data found for {inherit}, {inherit_type}, {inherit_pool}, {repetition}')
+            print(f'No data found for {environment}, {inherit}, {inherit_type}, {inherit_pool}, {repetition}')
             print(len(data_array)) if data_array is not None else print("None")
             print()
             continue
 
-        max_vals = np.max(data_array, axis=1)
+        max_vals = np.mean(data_array, axis=1)
         running_max = np.maximum.accumulate(max_vals)
-        curves.append(running_max)
+        curves.append(max_vals)
 
     if not curves:
         return

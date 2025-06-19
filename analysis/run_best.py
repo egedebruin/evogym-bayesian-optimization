@@ -14,12 +14,12 @@ from robot.active import Controller
 from robot.sensors import Sensors
 from main import set_number_of_sensors
 
-def get_best_individual(min_generation=0):
+def get_best_individual(folder, min_generation=0):
     set_number_of_sensors()
     best_individual = None
     best_fitness = float("-inf")
 
-    with open(config.FOLDER + "individuals.txt", "r") as file:
+    with open(folder + "individuals.txt", "r") as file:
         for line in file:
             if not line.strip():
                 continue  # Skip empty lines
@@ -40,13 +40,12 @@ def get_best_individual(min_generation=0):
 
 
 def main():
-    best_individual = get_best_individual()
+    best_individual = get_best_individual(config.FOLDER)
 
     grid = np.array(ast.literal_eval(best_individual[1]))
     sim, viewer = world.build_world(grid, start.make_rng_seed())
 
     experience = ast.literal_eval(best_individual[3])
-    # best_brain = sorted(experience, key=lambda evaluation: float(evaluation[1]), reverse=True)[0][0]
     args = Brain.next_point_to_controller_values(experience, sim.get_actuator_indices('robot'))
 
     controller = Controller(args)

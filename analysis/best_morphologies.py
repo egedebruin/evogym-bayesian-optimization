@@ -33,6 +33,7 @@ LABELS = {
 SUB_FOLDER = 'baseline'
 EVALS_PER_GEN = 50
 ENVIRONMENT = 'simple'
+REPS = 5
 
 def main():
     rng = start.make_rng_seed()
@@ -41,19 +42,25 @@ def main():
         'type': [],
         'pool': [],
         'repetition': [],
+        'experiment_repetition': [],
+        'learn_iteration': [],
         'objective_value': []
     }
 
     strategy_keys = list(LABELS.keys())
 
-    for key in strategy_keys:
-        result = parallelize(key[0], key[1], key[2], 500, rng)
-        for repetition in range(len(result)):
-            result_dict['inherit'].append(key[0])
-            result_dict['type'].append(key[1])
-            result_dict['pool'].append(key[2])
-            result_dict['repetition'].append(repetition + 1)
-            result_dict['objective_value'].append(result[repetition])
+    for r in range(REPS):
+        for key in strategy_keys:
+            result = parallelize(key[0], key[1], key[2], 500, rng)
+            for repetition in range(len(result)):
+                for learn_iteration in range(len(result[repetition])):
+                    result_dict['inherit'].append(key[0])
+                    result_dict['type'].append(key[1])
+                    result_dict['pool'].append(key[2])
+                    result_dict['repetition'].append(r + 1)
+                    result_dict['experiment_repetition'].append(repetition + 1)
+                    result_dict['learn_iteration'].append(learn_iteration + 1)
+                    result_dict['objective_value'].append(result[repetition][learn_iteration])
 
     pd.DataFrame(result_dict).to_csv('../results/best_morphologies_results.csv', index=False)
 
@@ -109,6 +116,7 @@ def learn(grid, learn_iterations, rng):
     optimizer.set_gp_params(alpha=config.LEARN_ALPHA)
 
     objective_value = -math.inf
+    objective_values = []
     for bayesian_optimization_iteration in range(learn_iterations):
         print(f"Learn generation {bayesian_optimization_iteration + 1}")
         if bayesian_optimization_iteration == 0:
@@ -121,6 +129,7 @@ def learn(grid, learn_iterations, rng):
         sensors = Sensors(grid)
 
         result = world.run_simulator(sim, controller, sensors, viewer, config.SIMULATION_LENGTH, True)
+        objective_values.append(result)
 
         if result > objective_value:
             objective_value = result
@@ -128,7 +137,7 @@ def learn(grid, learn_iterations, rng):
         optimizer.register(params=next_point, target=result)
     sim.reset()
     viewer.close()
-    return objective_value
+    return objective_values
 
 if __name__ == '__main__':
     main()
