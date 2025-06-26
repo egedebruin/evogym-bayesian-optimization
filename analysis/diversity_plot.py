@@ -16,12 +16,11 @@ from individual import Individual
 # Constants
 POP_SIZE = 200
 EVALS_PER_GEN = 50
-REPETITIONS = 5
-GENERATIONS = 60
+REPETITIONS = 20
+GENERATIONS = 50
 SUB_FOLDER = 'baseline'
 
 LABELS = {
-    (0, 'parent', 1): 'Inherit Samples',
     (-1, 'none', 0): 'Individual learning',
     (8, 'best', 1): 'Social learning - Best - N=1',
     (8, 'best', 8): 'Social learning - Best - N=8',
@@ -33,7 +32,6 @@ LABELS = {
 }
 
 COLORS = {
-    (0, 'parent', 1): 'green',
     (-1, 'none', 0): 'red',
     (8, 'best', 1): 'black',
     (8, 'best', 8): 'grey',
@@ -48,7 +46,6 @@ LINE_STYLES = {
     (-1, 'none', 0): '--',
     (8, 'best', 1): ':',
     (8, 'best', 8): ':',
-    (0, 'parent', 1): '-',
     (8, 'parent', 1): '-',
     (8, 'random', 1): '-.',
     (8, 'random', 8): '-.',
@@ -165,16 +162,16 @@ def plot_means(data):
 
 
 def main():
-    environments = ['simple']
-    strategy_keys = list(LABELS.keys())  # 6 total strategies
+    environments = ['simple', 'catch', 'carry', 'steps']
+    strategy_keys = list(LABELS.keys())  # 8 total strategies
 
     result = []
 
-    for i, env in enumerate(environments):
-        with concurrent.futures.ProcessPoolExecutor(
-                max_workers=9
-        ) as executor:
-            futures = []
+    with concurrent.futures.ProcessPoolExecutor(
+            max_workers=32
+    ) as executor:
+        futures = []
+        for i, env in enumerate(environments):
             for idx, key in enumerate(strategy_keys):
                 futures.append(executor.submit(make_the_plot, *key, env))
 
@@ -187,4 +184,4 @@ def main():
 
 
 if __name__ == '__main__':
-    main_read()
+    main()

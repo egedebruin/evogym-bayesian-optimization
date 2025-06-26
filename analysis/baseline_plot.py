@@ -7,11 +7,10 @@ import plot  # Assumes you have a module `plot` with `get_data`
 # Constants
 POP_SIZE = 200
 EVALS_PER_GEN = 50
-REPETITIONS = 5
+REPETITIONS = 10
 SUB_FOLDER = 'baseline'
 
 LABELS = {
-    (0, 'parent', 1): 'Inherit Samples',
     (-1, 'none', 0): 'Individual learning',
     (8, 'best', 1): 'Social learning - Best - N=1',
     (8, 'best', 8): 'Social learning - Best - N=8',
@@ -23,7 +22,6 @@ LABELS = {
 }
 
 COLORS = {
-    (0, 'parent', 1): 'green',
     (-1, 'none', 0): 'red',
     (8, 'best', 1): 'black',
     (8, 'best', 8): 'grey',
@@ -38,7 +36,6 @@ LINE_STYLES = {
     (-1, 'none', 0): '--',
     (8, 'best', 1): ':',
     (8, 'best', 8): ':',
-    (0, 'parent', 1): '-',
     (8, 'parent', 1): '-',
     (8, 'random', 1): '-.',
     (8, 'random', 8): '-.',
@@ -48,9 +45,7 @@ LINE_STYLES = {
 
 
 def make_the_plot(inherit, inherit_type, inherit_pool, environment, ax):
-    GENERATIONS = 60
-    if environment == 'catch':
-        GENERATIONS = 30
+    GENERATIONS = 50
     key = (inherit, inherit_type, inherit_pool)
     label = LABELS.get(key)
     color = COLORS.get(key)
@@ -60,7 +55,7 @@ def make_the_plot(inherit, inherit_type, inherit_pool, environment, ax):
 
     curves = []
     for repetition in range(1, REPETITIONS + 1):
-        data_path = f'results/{SUB_FOLDER}/learn-{EVALS_PER_GEN}_inherit-{inherit}_type-{inherit_type}_pool-{inherit_pool}_environment-{environment}_repetition-{repetition}'
+        data_path = f'results/learn-{EVALS_PER_GEN}_inherit-{inherit}_type-{inherit_type}_pool-{inherit_pool}_environment-{environment}_repetition-{repetition}'
         data_array = plot.get_data(data_path, GENERATIONS)
 
         if data_array is None or len(data_array) < GENERATIONS:
@@ -69,9 +64,9 @@ def make_the_plot(inherit, inherit_type, inherit_pool, environment, ax):
             print()
             continue
 
-        max_vals = np.mean(data_array, axis=1)
+        max_vals = np.max(data_array, axis=1)
         running_max = np.maximum.accumulate(max_vals)
-        curves.append(max_vals)
+        curves.append(running_max)
 
     if not curves:
         return
@@ -102,10 +97,10 @@ def main():
         "lines.linewidth": 2.2
     })
 
-    environments = ['simple', 'catch']
+    environments = ['simple', 'steps', 'carry', 'catch']
     strategy_keys = list(LABELS.keys())  # 6 total strategies
 
-    fig, axes = plt.subplots(nrows=len(environments), figsize=(10, 10), sharey=True)
+    fig, axes = plt.subplots(nrows=len(environments), figsize=(10, 10), sharey=False)
     fig.subplots_adjust(top=0.85, right=0.78)  # Make space for legend
 
     for i, env in enumerate(environments):
