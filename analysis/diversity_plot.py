@@ -18,7 +18,6 @@ POP_SIZE = 200
 EVALS_PER_GEN = 50
 REPETITIONS = 20
 GENERATIONS = 50
-SUB_FOLDER = 'baseline'
 
 LABELS = {
     (-1, 'none', 0): 'Individual learning',
@@ -92,7 +91,7 @@ def make_the_plot(inherit, inherit_type, inherit_pool, environment):
         return None  # skip unknown combinations
 
     for repetition in range(1, REPETITIONS + 1):
-        data_path = f'results/{SUB_FOLDER}/learn-{EVALS_PER_GEN}_inherit-{inherit}_type-{inherit_type}_pool-{inherit_pool}_environment-{environment}_repetition-{repetition}'
+        data_path = f'results/learn-{EVALS_PER_GEN}_inherit-{inherit}_type-{inherit_type}_pool-{inherit_pool}_environment-{environment}_repetition-{repetition}'
         data_array = get_diversity(data_path)
         line = f"{inherit};{inherit_type};{inherit_pool};{environment};{repetition};{data_array.tolist()}"
         lines.append(line)
@@ -175,12 +174,17 @@ def main():
             for idx, key in enumerate(strategy_keys):
                 futures.append(executor.submit(make_the_plot, *key, env))
 
-        for future in futures:
-            lines = future.result()
-            if lines is None:
-                continue
-            for line in lines:
-                result.append(line)
+    for future in futures:
+        lines = future.result()
+        if lines is None:
+            continue
+        for line in lines:
+            result.append(line)
+
+
+    file = open("diversity.txt", "w")
+    file.write("\n".join(result))
+    file.close()
 
 
 if __name__ == '__main__':
