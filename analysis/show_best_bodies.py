@@ -1,7 +1,12 @@
 import ast
 import matplotlib.pyplot as plt
 import numpy as np
+import os
+import sys
 from matplotlib.colors import ListedColormap
+
+parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+sys.path.insert(0, parent_dir)
 from analysis import run_best
 
 
@@ -47,7 +52,7 @@ def plot_matrices_grid(matrices_dict, save_path=None):
     plt.tight_layout()
     if save_path:
         plt.savefig(save_path, bbox_inches='tight')
-    plt.show()
+    plt.savefig(f'morphologies.pdf')
 
 # =============================
 # Load the grids for all strategies and repetitions
@@ -55,7 +60,6 @@ def plot_matrices_grid(matrices_dict, save_path=None):
 
 LABELS = {
     (-1, 'none', 0): 'Individual learning',
-    (0, 'parent', 1): 'Inherit Samples',
     (8, 'parent', 1): 'Social learning - Parent',
     (8, 'best', 1): 'Social learning - Best - N=1',
     (8, 'best', 8): 'Social learning - Best - N=8',
@@ -67,7 +71,7 @@ LABELS = {
 
 SUB_FOLDER = 'baseline'
 EVALS_PER_GEN = 50
-ENVIRONMENT = 'catch'
+ENVIRONMENT = 'simple'
 
 strategy_keys = list(LABELS.keys())
 matrices_dict = {}
@@ -76,7 +80,7 @@ for key in strategy_keys:
     label = LABELS[key]
     matrices_dict[label] = []
 
-    for repetition in range(1, 6):
+    for repetition in range(1, 21):
         folder = f'results/{SUB_FOLDER}/learn-{EVALS_PER_GEN}_inherit-{key[0]}_type-{key[1]}_pool-{key[2]}_environment-{ENVIRONMENT}_repetition-{repetition}/'
         print(f'Loading: {folder}')
 
