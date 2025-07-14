@@ -74,7 +74,7 @@ def main():
     environments = ['simple', 'steps', 'carry', 'catch']
     strategy_keys = list(LABELS.keys())
 
-    fig, axes = plt.subplots(nrows=len(environments), figsize=(12, 10), sharey=True)
+    fig, axes = plt.subplots(nrows=len(environments), figsize=(12, 10))
     fig.subplots_adjust(top=0.9, right=0.75)  # Leave room on the right for the legend
 
     for i, env in enumerate(environments):

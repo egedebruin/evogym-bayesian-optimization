@@ -49,57 +49,57 @@ def main():
 
     strategy_keys = list(LABELS.keys())
 
-    for environment in ['simple', 'steps', 'carry']:
-        for r in range(REPS):
-            for key in strategy_keys:
-                result = parallelize(key[0], key[1], key[2], 1000, environment)
-                for repetition in range(len(result)):
-                    for learn_iteration in range(len(result[repetition])):
-                        result_dict['original_environment'].append(environment)
-                        result_dict['inherit'].append(key[0])
-                        result_dict['type'].append(key[1])
-                        result_dict['pool'].append(key[2])
-                        result_dict['repetition'].append(r + 1)
-                        result_dict['experiment_repetition'].append(repetition + 1)
-                        result_dict['learn_iteration'].append(learn_iteration + 1)
-                        result_dict['objective_value'].append(result[repetition][learn_iteration])
+    for r in range(REPS):
+        for key in strategy_keys:
+            result = parallelize(key[0], key[1], key[2], 1000)
+            for repetition in range(len(result)):
+                for learn_iteration in range(len(result[repetition][0])):
+                    result_dict['original_environment'].append(result[repetition][1])
+                    result_dict['inherit'].append(key[0])
+                    result_dict['type'].append(key[1])
+                    result_dict['pool'].append(key[2])
+                    result_dict['repetition'].append(r + 1)
+                    result_dict['experiment_repetition'].append(repetition + 1)
+                    result_dict['learn_iteration'].append(learn_iteration + 1)
+                    result_dict['objective_value'].append(result[repetition][0][learn_iteration])
 
     pd.DataFrame(result_dict).to_csv(f'results/{ENVIRONMENT}.csv', index=False)
 
-def parallelize(inherit, i_type, pool, learn_iterations, environment):
+def parallelize(inherit, i_type, pool, learn_iterations):
     grids = []
-    for repetition in range(1, 21):
-        folder = f'results/learn-{EVALS_PER_GEN}_inherit-{inherit}_type-{i_type}_pool-{pool}_environment-{environment}_repetition-{repetition}/'
-        best_fitness = float('-inf')
-        best_grid = None
+    for environment in ['simple', 'steps', 'carry', 'catch']:
+        for repetition in range(1, 21):
+            folder = f'results/learn-{EVALS_PER_GEN}_inherit-{inherit}_type-{i_type}_pool-{pool}_environment-{environment}_repetition-{repetition}/'
+            best_fitness = float('-inf')
+            best_grid = None
 
-        with open(folder + "/individuals.txt", "r") as file:
-            for line in file:
-                parts = line.strip().split(";")
-                try:
-                    fitness = float(parts[5])
-                    if fitness > best_fitness:
-                        best_fitness = fitness
-                        best_grid = np.array(ast.literal_eval(parts[1]))
-                except (ValueError, IndexError, SyntaxError):
-                    continue  # skip malformed lines
+            with open(folder + "/individuals.txt", "r") as file:
+                for line in file:
+                    parts = line.strip().split(";")
+                    try:
+                        fitness = float(parts[5])
+                        if fitness > best_fitness:
+                            best_fitness = fitness
+                            best_grid = np.array(ast.literal_eval(parts[1]))
+                    except (ValueError, IndexError, SyntaxError):
+                        continue  # skip malformed lines
 
-        if best_grid is not None:
-            grids.append(best_grid)
+            if best_grid is not None:
+                grids.append((best_grid, environment))
 
     with concurrent.futures.ProcessPoolExecutor(
-            max_workers=20
+            max_workers=80
     ) as executor:
         futures = []
-        for grid in grids:
-            futures.append(executor.submit(learn, grid, learn_iterations))
+        for grid, environment in grids:
+            futures.append(executor.submit(learn, grid, learn_iterations, environment))
 
     result = []
     for future in futures:
         result.append(future.result())
     return result
 
-def learn(grid, learn_iterations):
+def learn(grid, learn_iterations, original_environment):
     rng = start.make_rng_seed()
 
     brain = Brain(config.GRID_LENGTH, rng)
@@ -141,7 +141,7 @@ def learn(grid, learn_iterations):
         optimizer.register(params=next_point, target=result)
     sim.reset()
     viewer.close()
-    return objective_values
+    return objective_values, original_environment
 
 if __name__ == '__main__':
     main()
