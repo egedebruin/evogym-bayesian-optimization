@@ -20,7 +20,6 @@ from util import start, world
 
 LABELS = {
     (-1, 'none', 0): 'Individual learning',
-    (0, 'parent', 1): 'Inherit Samples',
     (8, 'parent', 1): 'Social learning - Parent',
     (8, 'best', 1): 'Social learning - Best - N=1',
     (8, 'best', 8): 'Social learning - Best - N=8',
@@ -36,8 +35,9 @@ ENVIRONMENT = 'simple'
 REPS = 5
 
 def main():
-    rng = start.make_rng_seed()
+    config.ENVIRONMENT = ENVIRONMENT
     result_dict = {
+        'original_environment': [],
         'inherit': [],
         'type': [],
         'pool': [],
@@ -49,25 +49,27 @@ def main():
 
     strategy_keys = list(LABELS.keys())
 
-    for r in range(REPS):
-        for key in strategy_keys:
-            result = parallelize(key[0], key[1], key[2], 500, rng)
-            for repetition in range(len(result)):
-                for learn_iteration in range(len(result[repetition])):
-                    result_dict['inherit'].append(key[0])
-                    result_dict['type'].append(key[1])
-                    result_dict['pool'].append(key[2])
-                    result_dict['repetition'].append(r + 1)
-                    result_dict['experiment_repetition'].append(repetition + 1)
-                    result_dict['learn_iteration'].append(learn_iteration + 1)
-                    result_dict['objective_value'].append(result[repetition][learn_iteration])
+    for environment in ['simple', 'steps', 'carry']:
+        for r in range(REPS):
+            for key in strategy_keys:
+                result = parallelize(key[0], key[1], key[2], 1000, environment)
+                for repetition in range(len(result)):
+                    for learn_iteration in range(len(result[repetition])):
+                        result_dict['original_environment'].append(environment)
+                        result_dict['inherit'].append(key[0])
+                        result_dict['type'].append(key[1])
+                        result_dict['pool'].append(key[2])
+                        result_dict['repetition'].append(r + 1)
+                        result_dict['experiment_repetition'].append(repetition + 1)
+                        result_dict['learn_iteration'].append(learn_iteration + 1)
+                        result_dict['objective_value'].append(result[repetition][learn_iteration])
 
-    pd.DataFrame(result_dict).to_csv('../results/best_morphologies_results.csv', index=False)
+    pd.DataFrame(result_dict).to_csv(f'results/{ENVIRONMENT}.csv', index=False)
 
-def parallelize(inherit, i_type, pool, learn_iterations, rng):
+def parallelize(inherit, i_type, pool, learn_iterations, environment):
     grids = []
-    for repetition in range(1, 6):
-        folder = f'results/learn-{EVALS_PER_GEN}_inherit-{inherit}_type-{i_type}_pool-{pool}_environment-{ENVIRONMENT}_repetition-{repetition}/'
+    for repetition in range(1, 21):
+        folder = f'results/learn-{EVALS_PER_GEN}_inherit-{inherit}_type-{i_type}_pool-{pool}_environment-{environment}_repetition-{repetition}/'
         best_fitness = float('-inf')
         best_grid = None
 
@@ -86,18 +88,20 @@ def parallelize(inherit, i_type, pool, learn_iterations, rng):
             grids.append(best_grid)
 
     with concurrent.futures.ProcessPoolExecutor(
-            max_workers=5
+            max_workers=20
     ) as executor:
         futures = []
         for grid in grids:
-            futures.append(executor.submit(learn, grid, learn_iterations, rng))
+            futures.append(executor.submit(learn, grid, learn_iterations))
 
     result = []
     for future in futures:
         result.append(future.result())
     return result
 
-def learn(grid, learn_iterations, rng):
+def learn(grid, learn_iterations):
+    rng = start.make_rng_seed()
+
     brain = Brain(config.GRID_LENGTH, rng)
 
     sim, viewer = world.build_world(grid, rng)
