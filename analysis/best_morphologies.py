@@ -9,6 +9,8 @@ from bayes_opt import BayesianOptimization, acquisition
 from sklearn.gaussian_process.kernels import Matern
 import pandas as pd
 
+from robot.brain_nn import BrainNN
+
 parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 sys.path.insert(0, parent_dir)
 
@@ -31,11 +33,15 @@ LABELS = {
 
 SUB_FOLDER = 'baseline'
 EVALS_PER_GEN = 50
-ENVIRONMENT = 'simple'
+ENVIRONMENT = 'carry'
 REPS = 5
 
 def main():
     config.ENVIRONMENT = ENVIRONMENT
+
+    if config.ENVIRONMENT == 'carry' or config.ENVIRONMENT == 'catch':
+        BrainNN.NUMBER_OF_INPUT_NEURONS = BrainNN.NUMBER_OF_INPUT_NEURONS + 2
+
     result_dict = {
         'original_environment': [],
         'inherit': [],
