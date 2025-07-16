@@ -9,8 +9,6 @@ from bayes_opt import BayesianOptimization, acquisition
 from sklearn.gaussian_process.kernels import Matern
 import pandas as pd
 
-from robot.brain_nn import BrainNN
-
 parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 sys.path.insert(0, parent_dir)
 
@@ -18,6 +16,7 @@ from configs import config
 from robot.active import Brain
 from robot.active import Controller
 from robot.sensors import Sensors
+from robot.brain_nn import BrainNN
 from util import start, world
 
 LABELS = {
