@@ -40,7 +40,7 @@ def main():
                 with open(individuals_path, "r") as f:
                     individuals_file = f.read().splitlines()
                     all_individuals = {
-                        line.split(";")[0]: float(line.split(";")[5]) - ast.literal_eval(line.split(";")[7])[1]
+                        line.split(";")[0]: (float(line.split(";")[5]) - ast.literal_eval(line.split(";")[7])[1], float(line.split(";")[5]))
                         for line in individuals_file
                     }
 
@@ -50,10 +50,16 @@ def main():
 
                 learning_delta_per_generation = []
                 for generation in generations:
-                    generation_learning_deltas = []
+                    max_individual = None
+                    max_value = float('-inf')
                     for individual in generation.split(";")[:-1]:
-                        generation_learning_deltas.append(all_individuals[individual])
-                    learning_delta_per_generation.append(generation_learning_deltas)
+                        value = all_individuals[individual][1]  # Index 1 is used for comparison
+                        if value > max_value:
+                            max_value = value
+                            max_individual = individual
+                    if max_individual is not None:
+                        # Save the learning delta (index 0) of the best individual
+                        learning_delta_per_generation.append(all_individuals[max_individual][0])
 
                 learning_delta_per_generation = np.array(learning_delta_per_generation)
                 mean_learning_delta_per_generation = np.mean(learning_delta_per_generation, axis=1)
