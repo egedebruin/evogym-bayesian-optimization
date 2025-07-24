@@ -62,9 +62,8 @@ def main():
                         learning_delta_per_generation.append(all_individuals[max_individual][0])
 
                 learning_delta_per_generation = np.array(learning_delta_per_generation)
-                mean_learning_delta_per_generation = np.mean(learning_delta_per_generation, axis=1)
 
-                all_runs.append(mean_learning_delta_per_generation)
+                all_runs.append(learning_delta_per_generation)
 
             if len(all_runs) == 0:
                 # Skip plotting if no data was found for this strategy
