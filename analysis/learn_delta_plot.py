@@ -2,7 +2,6 @@ import ast
 import os
 import numpy as np
 from matplotlib import pyplot as plt
-from concurrent.futures import ThreadPoolExecutor, as_completed
 
 LABELS = {
     (-1, 'none', 0): 'Individual learning',
@@ -18,50 +17,8 @@ LABELS = {
 REPETITIONS = 20
 ENVIRONMENTS = ['simple', 'steps', 'carry', 'catch']
 
-def load_run(environment, label, label_name, repetition):
-    folder = f'results/learn-50_inherit-{label[0]}_type-{label[1]}_pool-{label[2]}_environment-{environment}_repetition-{repetition}'
-    individuals_path = os.path.join(folder, "individuals.txt")
-    populations_path = os.path.join(folder, "populations.txt")
-
-    if not os.path.isfile(individuals_path) or not os.path.isfile(populations_path):
-        return None
-
-    try:
-        # Parse individuals
-        with open(individuals_path, "r") as f:
-            all_individuals = {}
-            for line in f:
-                parts = line.strip().split(";")
-                if len(parts) < 8:
-                    continue
-                # Fast tuple parsing instead of ast.literal_eval
-                baseline_str = parts[7]
-                baseline = float(baseline_str.strip("() ").split(",")[1])
-                eval_score = float(parts[5])
-                delta = eval_score - baseline
-                all_individuals[parts[0]] = (delta, eval_score)
-
-        # Parse populations
-        learning_deltas = []
-        with open(populations_path, "r") as f:
-            for line in f:
-                individuals = line.strip().split(";")[:-1]
-                best = max(
-                    ((iid, all_individuals[iid][1]) for iid in individuals if iid in all_individuals),
-                    key=lambda x: x[1],
-                    default=(None, None)
-                )
-                if best[0]:
-                    learning_deltas.append(all_individuals[best[0]][0])
-
-        return np.array(learning_deltas)
-
-    except Exception as e:
-        print(f"Error processing {folder}: {e}")
-        return None
-
-
 def main():
+
     plt.figure(figsize=(12, len(ENVIRONMENTS) * 4))
 
     for env_idx, environment in enumerate(ENVIRONMENTS):
@@ -70,23 +27,50 @@ def main():
         for label, label_name in LABELS.items():
             all_runs = []
 
-            # Use thread pool to load all repetitions in parallel
-            with ThreadPoolExecutor(max_workers=8) as executor:
-                futures = [
-                    executor.submit(load_run, environment, label, label_name, repetition)
-                    for repetition in range(1, REPETITIONS + 1)
-                ]
+            for repetition in range(1, REPETITIONS + 1):
+                folder = f'results/learn-50_inherit-{label[0]}_type-{label[1]}_pool-{label[2]}_environment-{environment}_repetition-{repetition}'
+                individuals_path = os.path.join(folder, "individuals.txt")
+                populations_path = os.path.join(folder, "populations.txt")
 
-                for future in as_completed(futures):
-                    result = future.result()
-                    if result is not None and len(result) > 0:
-                        all_runs.append(result)
+                if not os.path.exists(individuals_path) or not os.path.exists(populations_path):
+                    # Skip if either file is missing
+                    continue
 
-            if not all_runs:
+                # Load individual learning deltas
+                with open(individuals_path, "r") as f:
+                    individuals_file = f.read().splitlines()
+                    all_individuals = {
+                        line.split(";")[0]: (float(line.split(";")[5]) - ast.literal_eval(line.split(";")[7])[1], float(line.split(";")[5]))
+                        for line in individuals_file
+                    }
+
+                # Load population generations
+                with open(populations_path, "r") as f:
+                    generations = f.read().splitlines()
+
+                learning_delta_per_generation = []
+                for generation in generations:
+                    max_individual = None
+                    max_value = float('-inf')
+                    for individual in generation.split(";")[:-1]:
+                        value = all_individuals[individual][1]  # Index 1 is used for comparison
+                        if value > max_value:
+                            max_value = value
+                            max_individual = individual
+                    if max_individual is not None:
+                        # Save the learning delta (index 0) of the best individual
+                        learning_delta_per_generation.append(all_individuals[max_individual][0])
+
+                learning_delta_per_generation = np.array(learning_delta_per_generation)
+
+                all_runs.append(learning_delta_per_generation)
+
+            if len(all_runs) == 0:
+                # Skip plotting if no data was found for this strategy
                 continue
 
-            min_len = min(len(run) for run in all_runs)
-            all_runs = np.array([run[:min_len] for run in all_runs])
+            # Average over repetitions
+            all_runs = np.array(all_runs)
             avg_over_repetitions = np.mean(all_runs, axis=0)
 
             x_vals = np.arange(1, len(avg_over_repetitions) + 1)
