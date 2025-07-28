@@ -62,7 +62,9 @@ def learn(individual, rng):
 	experience = []
 	for bayesian_optimization_iteration in range(config.LEARN_ITERATIONS):
 		logger.info(f"Learn generation {bayesian_optimization_iteration + 1}")
-		if bayesian_optimization_iteration == 0 and config.INHERIT_SAMPLES == -1:
+		if config.RANDOM_LEARNING:
+			next_point = optimizer.suggest()
+		elif bayesian_optimization_iteration == 0 and config.INHERIT_SAMPLES == -1:
 			next_point = brain.to_next_point(actuator_indices)
 		elif bayesian_optimization_iteration < config.INHERIT_SAMPLES and len(inherited_experience) > 0:
 			next_point = inherited_experience[bayesian_optimization_iteration][0]
@@ -83,9 +85,10 @@ def learn(individual, rng):
 			if bayesian_optimization_iteration == 0 and config.INHERIT_SAMPLES == -1:
 				best_inherited_brain = (next_point, result)
 
-		alphas = np.append(alphas, config.LEARN_ALPHA)
-		optimizer.register(params=next_point, target=result)
-		optimizer.set_gp_params(alpha=alphas)
+		if not config.RANDOM_LEARNING:
+			alphas = np.append(alphas, config.LEARN_ALPHA)
+			optimizer.register(params=next_point, target=result)
+			optimizer.set_gp_params(alpha=alphas)
 		experience.append((next_point, result))
 	sim.reset()
 	viewer.close()

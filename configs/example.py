@@ -7,6 +7,7 @@ ENVIRONMENT = 'simple'
 INHERIT_TYPE = 'best' # parent, random, none, similar or best
 SOCIAL_POOL = 8
 
+RANDOM_LEARNING = False
 LEARN_INHERITED_ALPHA = 2
 LEARN_KAPPA = 3
 LEARN_LENGTH_SCALE = 0.2
