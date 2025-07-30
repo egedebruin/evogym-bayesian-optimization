@@ -83,7 +83,7 @@ def parallelize(inherit, i_type, pool, learn_iterations):
     grids = []  # list of tuples: (r, best_grid)
     for r in range(REPS):
         folder = (
-            f'results/robinhpc/learn-{EVALS_PER_GEN}_inherit-{inherit}_type-{i_type}_pool-{pool}_environment-{ENVIRONMENT}_random-1_repetition-1'
+            f'results/learn-{EVALS_PER_GEN}_inherit-{inherit}_type-{i_type}_pool-{pool}_environment-{ENVIRONMENT}_repetition-1'
         )
         best_fitness = float('-inf')
         best_grid = None
