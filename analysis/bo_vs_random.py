@@ -103,7 +103,7 @@ def parallelize(inherit, i_type, pool, learn_iterations):
     if not grids:
         return results  # nothing to do
 
-    with concurrent.futures.ProcessPoolExecutor(max_workers=10) as executor:
+    with concurrent.futures.ProcessPoolExecutor(max_workers=51) as executor:
         futures = []
 
         # --- rando=True exactly once (pick the first available grid) ---
