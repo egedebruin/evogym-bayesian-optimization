@@ -34,7 +34,7 @@ SUB_FOLDER = 'baseline'
 EVALS_PER_GEN = 50
 ENVIRONMENT = 'simple'
 REPS = 10
-LENGTH_SCALES = [-1, 0.2, 0.5, 1.0, 10.0]
+LENGTH_SCALES = [-1, 0.2, 5.0, 10.0, 15.0]
 
 def main():
     config.ENVIRONMENT = ENVIRONMENT
@@ -81,36 +81,29 @@ def main():
 def parallelize(inherit, i_type, pool, learn_iterations):
     # Keep (repetition, best_grid) so we can track which run came from which rep
     grids = []  # list of tuples: (r, best_grid)
+    folder = (
+        f'results/learn-{EVALS_PER_GEN}_inherit-{inherit}_type-{i_type}_pool-{pool}_environment-{ENVIRONMENT}_repetition-1'
+    )
+    best_fitness = float('-inf')
+    best_grid = None
+
+    with open(folder + "/individuals.txt", "r") as file:
+        for line in file:
+            parts = line.strip().split(";")
+            fitness = float(parts[5])
+            if fitness > best_fitness:
+                best_fitness = fitness
+                best_grid = np.array(ast.literal_eval(parts[1]))
+
     for r in range(REPS):
-        folder = (
-            f'results/learn-{EVALS_PER_GEN}_inherit-{inherit}_type-{i_type}_pool-{pool}_environment-{ENVIRONMENT}_repetition-1'
-        )
-        best_fitness = float('-inf')
-        best_grid = None
-
-        with open(folder + "/individuals.txt", "r") as file:
-            for line in file:
-                parts = line.strip().split(";")
-                fitness = float(parts[5])
-                if fitness > best_fitness:
-                    best_fitness = fitness
-                    best_grid = np.array(ast.literal_eval(parts[1]))
-
-        if best_grid is not None:
-            grids.append((r, best_grid))
+        grids.append((r, best_grid))
 
     results = []
-    if not grids:
-        return results  # nothing to do
-
-    with concurrent.futures.ProcessPoolExecutor(max_workers=51) as executor:
+    with concurrent.futures.ProcessPoolExecutor(max_workers=60) as executor:
         futures = []
 
         # --- rando=True exactly once (pick the first available grid) ---
         r0, g0 = grids[0]
-        futures.append(
-            executor.submit(learn, g0, learn_iterations, True, None, r0)
-        )
 
         # --- For every grid, run rando=False with the four length_scales ---
         for r, grid in grids:
@@ -118,6 +111,9 @@ def parallelize(inherit, i_type, pool, learn_iterations):
                 futures.append(
                     executor.submit(learn, grid, learn_iterations, False, ls, r)
                 )
+            futures.append(
+                executor.submit(learn, g0, learn_iterations, True, None, r0)
+            )
 
         for fut in concurrent.futures.as_completed(futures):
             results.append(fut.result())
@@ -191,7 +187,7 @@ def learn(grid, learn_iterations, rando, length_scale, repetition):
     return {
         'objective_values': objective_values,
         'rando': rando,
-        'length_scale': None if rando else ls,
+        'length_scale': None if rando else length_scale,
         'repetition': repetition,
     }
 
