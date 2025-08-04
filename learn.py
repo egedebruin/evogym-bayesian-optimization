@@ -2,10 +2,11 @@ import concurrent.futures
 import math
 
 import numpy as np
-from bayes_opt import BayesianOptimization, acquisition
+from bayes_opt import acquisition
 
 from sklearn.gaussian_process.kernels import Matern
 
+from custom_bayesian_optimization import CustomBayesianOptimization
 from robot.active import Controller
 from configs import config
 from robot.sensors import Sensors
@@ -37,7 +38,7 @@ def learn(individual, rng):
 		logger.error(robot_body.grid)
 		return -math.inf, [], individual
 
-	optimizer = BayesianOptimization(
+	optimizer = CustomBayesianOptimization(
 		f=None,
 		pbounds=brain.get_p_bounds(actuator_indices),
 		allow_duplicate_points=True,
