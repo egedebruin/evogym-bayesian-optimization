@@ -59,7 +59,7 @@ def learn(individual, rng):
 
 	objective_value = -math.inf
 	best_brain = None
-	best_inherited_brain = (None, -1)
+	best_inherited_objective_value = -math.inf
 	experience = []
 	for bayesian_optimization_iteration in range(config.LEARN_ITERATIONS):
 		logger.info(f"Learn generation {bayesian_optimization_iteration + 1}")
@@ -80,9 +80,9 @@ def learn(individual, rng):
 			best_brain = next_point
 
 			if bayesian_optimization_iteration < config.INHERIT_SAMPLES and len(inherited_experience) > 0:
-				best_inherited_brain = (next_point, result)
+				best_inherited_objective_value = result
 			if bayesian_optimization_iteration == 0 and config.INHERIT_SAMPLES == -1:
-				best_inherited_brain = (next_point, result)
+				best_inherited_objective_value = result
 
 		if not config.RANDOM_LEARNING:
 			alphas = np.append(alphas, config.LEARN_ALPHA)
@@ -91,4 +91,4 @@ def learn(individual, rng):
 		experience.append((next_point, result))
 	sim.reset()
 	viewer.close()
-	return objective_value, best_brain, experience, best_inherited_brain, individual
+	return objective_value, best_brain, experience, best_inherited_objective_value, individual
