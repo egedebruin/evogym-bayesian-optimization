@@ -7,7 +7,7 @@ import plot  # Assumes you have a module `plot` with `get_data`
 # Constants
 POP_SIZE = 200
 EVALS_PER_GEN = 50
-REPETITIONS = 10
+REPETITIONS = 20
 SUB_FOLDER = 'baseline'
 
 LABELS = {
