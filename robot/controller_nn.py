@@ -5,6 +5,63 @@ import torch.nn.functional as F
 
 from robot.controller import Controller
 
+class RunningNorm:
+    def __init__(self, epsilon=1e-8):
+        self.mean = 0.0
+        self.var = 1.0
+        self.count = 0
+        self.epsilon = epsilon
+
+    def update(self, x, mask=None):
+        """
+        Update running mean/std.
+        x: torch.Tensor or np.ndarray
+        mask: same shape as x, with True where values are valid.
+        """
+        x = np.asarray(x)
+
+        if mask is not None:
+            x = x[mask]  # keep only valid values
+        else:
+            x = x.reshape(-1)
+
+        if x.size == 0:
+            return  # nothing to update
+
+        batch_mean = x.mean()
+        batch_var = x.var()
+        batch_count = x.shape[0]
+
+        # Welford update for running mean/var
+        delta = batch_mean - self.mean
+        tot_count = self.count + batch_count
+
+        new_mean = self.mean + delta * batch_count / tot_count
+        m_a = self.var * self.count
+        m_b = batch_var * batch_count
+        M2 = m_a + m_b + delta**2 * self.count * batch_count / tot_count
+        new_var = M2 / tot_count
+
+        self.mean, self.var, self.count = new_mean, new_var, tot_count
+
+    def normalize(self, x, mask=None):
+        """
+        Normalize with running stats.
+        If mask is given, skip normalization where mask=False (e.g. padded zeros).
+        """
+        if isinstance(x, torch.Tensor):
+            mean, std = torch.tensor(self.mean, device=x.device), torch.tensor(self.var**0.5 + self.epsilon, device=x.device)
+        else:
+            mean, std = self.mean, (self.var**0.5 + self.epsilon)
+
+        if mask is not None:
+            x_norm = x.copy() if isinstance(x, np.ndarray) else x.clone()
+            x_norm[mask] = (x[mask] - mean) / std
+            return x_norm
+        else:
+            return (x - mean) / std
+
+
 class ControllerNN(Controller, nn.Module):
 
     def __init__(self, args):
@@ -12,67 +69,47 @@ class ControllerNN(Controller, nn.Module):
 
         self.policy_optimizer = None
         self.critic_optimizer = None
-        self.gamma = 0.8
-        random_init = True
+        self.gamma = 0.85
 
-        def maybe_random(name, shape):
-            if random_init:
-                if name == 'hidden_weights':
-                    return nn.Parameter(torch.empty(shape).uniform_(-1.0, 1.0))
-                elif name == 'output_weights':
-                    return nn.Parameter(torch.empty(shape).uniform_(-2.0, 2.0))
-                elif name == 'hidden_biases':
-                    return nn.Parameter(torch.empty(shape).uniform_(-0.1, 0.1))
-                elif name == 'output_biases':
-                    return nn.Parameter(torch.empty(shape).uniform_(-1.0, 1.0))
-                else:
-                    raise KeyError(f"Unknown parameter name for random init: {name}")
-            else:
-                return nn.Parameter(torch.tensor(args[name], dtype=torch.float32))
+        def from_args(name):
+            if name not in args:
+                raise KeyError(f"Missing parameter '{name}' in args")
+            return nn.Parameter(args[name].detach().clone())
 
         # Policy network weights/biases
-        self.hidden_weights = maybe_random('hidden_weights', args['hidden_weights'].shape)
-        self.hidden_biases = maybe_random('hidden_biases', args['hidden_biases'].shape)
-        self.output_weights = maybe_random('output_weights', args['output_weights'].shape)
-        self.output_biases = maybe_random('output_biases', args['output_biases'].shape)
+        self.hidden_weights = from_args('hidden_weights')
+        self.hidden_biases = from_args('hidden_biases')
+        self.output_weights = from_args('output_weights')
+        self.output_biases = from_args('output_biases')
 
-        # Dimensions for critic layers based on policy shapes
-        input_dim = args['hidden_weights'].shape[0]  # sensor input dim
-        hidden_dim = args['hidden_weights'].shape[1]  # policy hidden layer size
-        output_dim = args['output_weights'].shape[1]  # policy output dim (action dim)
-        critic_input_dim = input_dim + output_dim  # critic input = state + action
+        # Critic weights
+        self.critic_hidden_weights = from_args('critic_hidden_weights')
+        self.critic_hidden_biases = from_args('critic_hidden_biases')
+        self.critic_hidden2_weights = from_args('critic_hidden2_weights')
+        self.critic_hidden2_biases = from_args('critic_hidden2_biases')
 
-        # Helper function to convert to nn.Parameter if exists else None
-        def param_or_none(key):
-            if key in args:
-                return nn.Parameter(torch.tensor(args[key], dtype=torch.float32))
-            else:
-                return None
+        self.critic_output_weights = from_args('critic_output_weights')
+        self.critic_output_biases = from_args('critic_output_biases')
 
-        # Critic weights or None if not in args
-        self.critic_hidden_weights = param_or_none('critic_hidden_weights')
-        self.critic_hidden_biases = param_or_none('critic_hidden_biases')
-        self.critic_output_weights = param_or_none('critic_output_weights')
-        self.critic_output_biases = param_or_none('critic_output_biases')
-
-        # Initialize randomly if not provided
-        if self.critic_hidden_weights is None:
-            self.critic_hidden_weights = nn.Parameter(torch.randn(critic_input_dim, hidden_dim) * 0.1)
-        if self.critic_hidden_biases is None:
-            self.critic_hidden_biases = nn.Parameter(torch.zeros(hidden_dim))
-        if self.critic_output_weights is None:
-            self.critic_output_weights = nn.Parameter(torch.randn(hidden_dim, 1) * 0.1)
-        if self.critic_output_biases is None:
-            self.critic_output_biases = nn.Parameter(torch.zeros(1))
-
-        self.target_critic_hidden_weights = self.critic_hidden_weights.clone().detach()
-        self.target_critic_hidden_biases = self.critic_hidden_biases.clone().detach()
-        self.target_critic_output_weights = self.critic_output_weights.clone().detach()
-        self.target_critic_output_biases = self.critic_output_biases.clone().detach()
+        # Target critic weights (extra layer too)
+        self.target_critic_hidden_weights = nn.Parameter(self.critic_hidden_weights.clone().detach(),
+                                                         requires_grad=False)
+        self.target_critic_hidden_biases = nn.Parameter(self.critic_hidden_biases.clone().detach(),
+                                                        requires_grad=False)
+        self.target_critic_hidden2_weights = nn.Parameter(self.critic_hidden2_weights.clone().detach(),
+                                                          requires_grad=False)
+        self.target_critic_hidden2_biases = nn.Parameter(self.critic_hidden2_biases.clone().detach(),
+                                                         requires_grad=False)
+        self.target_critic_output_weights = nn.Parameter(self.critic_output_weights.clone().detach(),
+                                                         requires_grad=False)
+        self.target_critic_output_biases = nn.Parameter(self.critic_output_biases.clone().detach(),
+                                                        requires_grad=False)
 
         self.set_optimizers()
+        self.velocity_indices = list(range(9, 27))
+        self.velocity_norm = RunningNorm()
 
-    def set_optimizers(self, policy_lr=1e-3, critic_lr=1e-2):
+    def set_optimizers(self, policy_lr=1e-10, critic_lr=1e-3):
         # Separate params for policy and critic
         policy_params = [self.hidden_weights, self.hidden_biases,
                          self.output_weights, self.output_biases]
@@ -82,69 +119,172 @@ class ControllerNN(Controller, nn.Module):
         self.policy_optimizer = torch.optim.Adam(policy_params, lr=policy_lr)
         self.critic_optimizer = torch.optim.Adam(critic_params, lr=critic_lr)
 
-    def forward_target_critic(self, sensor_inputs, actions):
-        critic_input = torch.cat([sensor_inputs, actions], dim=-1)
-        hidden = F.relu(critic_input @ self.target_critic_hidden_weights + self.target_critic_hidden_biases)
-        q_value = hidden @ self.target_critic_output_weights + self.target_critic_output_biases
+    def forward_critic(self, critic_input):
+        h1 = F.relu(critic_input @ self.critic_hidden_weights + self.critic_hidden_biases)
+        h2 = F.relu(h1 @ self.critic_hidden2_weights + self.critic_hidden2_biases)
+        q_value = h2 @ self.critic_output_weights + self.critic_output_biases
         return q_value.squeeze(-1)
 
-    def forward_critic(self, sensor_inputs, actions):
-        critic_input = torch.cat([sensor_inputs, actions], dim=-1)
-        hidden = F.relu(critic_input @ self.critic_hidden_weights + self.critic_hidden_biases)
-        q_value = hidden @ self.critic_output_weights + self.critic_output_biases
+    def forward_target_critic(self, critic_input):
+        h1 = F.relu(critic_input @ self.target_critic_hidden_weights + self.target_critic_hidden_biases)
+        h2 = F.relu(h1 @ self.target_critic_hidden2_weights + self.target_critic_hidden2_biases)
+        q_value = h2 @ self.target_critic_output_weights + self.target_critic_output_biases
         return q_value.squeeze(-1)
 
     def soft_update_target(self, tau=0.01):
         for target, source in [
             (self.target_critic_hidden_weights, self.critic_hidden_weights),
             (self.target_critic_hidden_biases, self.critic_hidden_biases),
+            (self.target_critic_hidden2_weights, self.critic_hidden2_weights),
+            (self.target_critic_hidden2_biases, self.critic_hidden2_biases),
             (self.target_critic_output_weights, self.critic_output_weights),
             (self.target_critic_output_biases, self.critic_output_biases),
         ]:
             target.data.copy_(tau * source.data + (1.0 - tau) * target.data)
 
     def control(self, sensor_inputs):
+        """
+        sensor_inputs: list of length M, each element = list/array of input_dim features
+        """
         with torch.no_grad():
-            sensor_inputs = torch.FloatTensor(np.array(sensor_inputs))
-            hidden = F.relu(sensor_inputs @ self.hidden_weights + self.hidden_biases)
-            raw_action = torch.sigmoid(hidden @ self.output_weights + self.output_biases).numpy()
-            adjusted_action = raw_action + 0.6
-        return adjusted_action, raw_action
+            processed_inputs = []
 
-    def update(self, sensor_inputs, raw_actions, rewards, next_sensor_inputs):
-        # Convert inputs to tensors
-        sensor_inputs = torch.FloatTensor(sensor_inputs)
-        raw_actions = torch.FloatTensor(raw_actions)
-        rewards = torch.FloatTensor(rewards)
-        next_sensor_inputs = torch.FloatTensor(next_sensor_inputs)
+            vel_indices = list(range(9, 27))
 
-        # --- Critic update ---
+            for sensors in sensor_inputs:
+                sensors = np.array(sensors, dtype=np.float32)
+
+                # Normalize velocity features, skip padded zeros
+                vels = sensors[vel_indices]
+                mask = (vels != 0)
+                vels_normed = self.velocity_norm.normalize(vels, mask=mask)
+                sensors[vel_indices] = vels_normed
+
+                processed_inputs.append(sensors)
+
+            # Convert to tensor (M, input_dim)
+            sensor_tensor = torch.tensor(np.array(processed_inputs), dtype=torch.float32,
+                                         device=self.hidden_weights.device)
+
+            # Forward per actuator
+            hidden = F.relu(sensor_tensor @ self.hidden_weights + self.hidden_biases)
+            raw_output = hidden @ self.output_weights + self.output_biases
+            raw_actions = torch.sigmoid(raw_output).cpu().numpy()
+
+        return raw_actions
+
+    def update(self, sensor_inputs, raw_actions, rewards, next_sensor_inputs, do_policy_update):
+        device = self.hidden_weights.device
+        B, M, input_dim = sensor_inputs.shape
+
+        # --- Convert to torch ---
+        sensor_inputs = torch.as_tensor(sensor_inputs, dtype=torch.float32, device=device)
+        raw_actions = torch.as_tensor(raw_actions, dtype=torch.float32, device=device)
+        rewards = torch.as_tensor(rewards, dtype=torch.float32, device=device)
+        next_sensor_inputs = torch.as_tensor(next_sensor_inputs, dtype=torch.float32, device=device)
+
+        # --- Normalize velocities (indices 9–26), skipping padded zeros ---
+        vel_indices = list(range(9, 27))
+
+        # Extract velocities and build mask
+        vels = sensor_inputs[:, :, vel_indices].cpu().numpy()
+        mask = (vels != 0)
+
+        # Update running stats
+        self.velocity_norm.update(vels, mask=mask)
+
+        # Normalize
+        vels_normed = self.velocity_norm.normalize(vels, mask=mask)
+
+        # Put back normalized velocities
+        sensor_inputs[:, :, vel_indices] = torch.tensor(vels_normed, dtype=torch.float32, device=device)
+
+        # Do the same for next_sensor_inputs
+        next_vels = next_sensor_inputs[:, :, vel_indices].cpu().numpy()
+        next_mask = (next_vels != 0)
+        next_vels_normed = self.velocity_norm.normalize(next_vels, mask=next_mask)
+        next_sensor_inputs[:, :, vel_indices] = torch.tensor(next_vels_normed, dtype=torch.float32, device=device)
+
+        self.update_critic(sensor_inputs, raw_actions, rewards, next_sensor_inputs)
+
+        # --- Policy update ---
+        if do_policy_update:
+            self.update_policy(sensor_inputs)
+
+    def update_critic(self, sensor_inputs, raw_actions, rewards, next_sensor_inputs):
+        """
+        sensor_inputs: (B, M, input_dim)
+        raw_actions: (B, M, output_dim)
+        rewards: (B, 1)
+        next_sensor_inputs: (B, M, input_dim)
+        """
+        device = self.hidden_weights.device
+        B, M, input_dim = sensor_inputs.shape
+
+        # Convert to tensors
+        sensor_inputs = torch.as_tensor(sensor_inputs, dtype=torch.float32, device=device)
+        raw_actions = torch.as_tensor(raw_actions, dtype=torch.float32, device=device)
+        rewards = torch.as_tensor(rewards, dtype=torch.float32, device=device)
+        next_sensor_inputs = torch.as_tensor(next_sensor_inputs, dtype=torch.float32, device=device)
+
+        # Concatenate all actuator states and actions per batch
+        critic_inputs = torch.cat([sensor_inputs.reshape(B, -1), raw_actions.reshape(B, -1)], dim=-1)
+        next_policy_actions = []
+
         with torch.no_grad():
-            next_hidden = F.relu(next_sensor_inputs @ self.hidden_weights + self.hidden_biases)
-            next_actions = torch.sigmoid(next_hidden @ self.output_weights + self.output_biases)
-            target_q = rewards + self.gamma * self.forward_target_critic(next_sensor_inputs, next_actions)
+            for m in range(M):
+                next_hidden = F.relu(next_sensor_inputs[:, m, :] @ self.hidden_weights + self.hidden_biases)
+                next_a = torch.sigmoid(next_hidden @ self.output_weights + self.output_biases)
+                next_policy_actions.append(next_a)
+            next_policy_actions = torch.cat(next_policy_actions, dim=-1)  # (B, M*output_dim)
+            next_critic_inputs = torch.cat([next_sensor_inputs.reshape(B, -1), next_policy_actions], dim=-1)
+            target_q = rewards.squeeze(-1) + self.gamma * self.forward_target_critic(next_critic_inputs)
 
-        predicted_q = self.forward_critic(sensor_inputs, raw_actions)
+        # Predicted Q
+        predicted_q = self.forward_critic(critic_inputs)
         critic_loss = F.mse_loss(predicted_q, target_q)
 
+        # Critic update
         self.critic_optimizer.zero_grad()
         critic_loss.backward()
         torch.nn.utils.clip_grad_norm_([
             self.critic_hidden_weights, self.critic_hidden_biases,
+            self.critic_hidden2_weights, self.critic_hidden2_biases,
             self.critic_output_weights, self.critic_output_biases
         ], max_norm=1.0)
+
         self.critic_optimizer.step()
         self.soft_update_target()
 
-        # --- Skip policy update if critic is not accurate yet ---
-        if critic_loss.item() > 1.0:
-            return
-        # print(critic_loss.item())
+    def clip_policy_params(self):
+        # Hidden weights: [-1, 1]
+        self.hidden_weights.data.clamp_(-1.0, 1.0)
 
-        # --- Policy update ---
-        predicted_hidden = F.relu(sensor_inputs @ self.hidden_weights + self.hidden_biases)
-        predicted_actions = torch.sigmoid(predicted_hidden @ self.output_weights + self.output_biases)
-        policy_loss = -self.forward_critic(sensor_inputs, predicted_actions).mean()
+        # Hidden biases: [-0.1, 0.1]
+        self.hidden_biases.data.clamp_(-0.1, 0.1)
+
+        # Output weights: [-2, 2]
+        self.output_weights.data.clamp_(-0.5, 0.5)
+
+        # Output biases: [-1, 1]
+        self.output_biases.data.clamp_(-0.1, 0.1)
+
+    def update_policy(self, sensor_inputs):
+        device = self.hidden_weights.device
+        B, M, input_dim = sensor_inputs.shape
+
+        sensor_inputs = torch.as_tensor(sensor_inputs, dtype=torch.float32, device=device)
+        all_actions = []
+
+        for m in range(M):
+            hidden = F.relu(sensor_inputs[:, m, :] @ self.hidden_weights + self.hidden_biases)
+            a = torch.sigmoid(hidden @ self.output_weights + self.output_biases)
+            all_actions.append(a)
+        all_actions = torch.cat(all_actions, dim=-1)  # (B, M*output_dim)
+
+        # Concatenate states and actions for global critic
+        critic_inputs = torch.cat([sensor_inputs.reshape(B, -1), all_actions], dim=-1)
+        policy_loss = -self.forward_critic(critic_inputs).mean()
 
         self.policy_optimizer.zero_grad()
         policy_loss.backward()
@@ -153,3 +293,4 @@ class ControllerNN(Controller, nn.Module):
             self.output_weights, self.output_biases
         ], max_norm=1.0)
         self.policy_optimizer.step()
+        self.clip_policy_params()

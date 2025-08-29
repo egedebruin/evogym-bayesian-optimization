@@ -43,6 +43,7 @@ def main():
     best_individual = get_best_individual()
 
     grid = np.array(ast.literal_eval(best_individual[1]))
+    print(grid)
     sim, viewer = world.build_world(grid, start.make_rng_seed())
 
     experience = ast.literal_eval(best_individual[3])

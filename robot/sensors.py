@@ -67,7 +67,15 @@ class Sensors:
                 sensor_input = np.concatenate((sensor_input, package_input))
 
             # Time sensor
-            input_vectors.append(np.concatenate((sensor_input, [current_time % 25])))
+            # Cyclic input: map 0..25 → 0..2π
+            cyc = current_time % 25  # gives 0..25
+            theta = 2 * np.pi * cyc / 25  # normalize to 0..2π
+
+            cyc_sin = np.sin(theta)
+            cyc_cos = np.cos(theta)
+
+            # Append to your input vector
+            input_vectors.append(np.concatenate((sensor_input, [cyc_sin, cyc_cos])))
 
         return input_vectors
 
