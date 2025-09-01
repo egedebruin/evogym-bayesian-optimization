@@ -5,13 +5,14 @@ import os
 import sys
 
 import numpy as np
-from bayes_opt import BayesianOptimization, acquisition
+from bayes_opt import acquisition
 from sklearn.gaussian_process.kernels import Matern
 import pandas as pd
 
 parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 sys.path.insert(0, parent_dir)
 
+from custom_bayesian_optimization import CustomBayesianOptimization
 from configs import config
 from robot.active import Brain
 from robot.active import Controller
@@ -111,7 +112,7 @@ def learn(grid, learn_iterations, original_environment):
 
     sim, viewer = world.build_world(grid, rng)
     actuator_indices = sim.get_actuator_indices('robot')
-    optimizer = BayesianOptimization(
+    optimizer = CustomBayesianOptimization(
         f=None,
         pbounds=brain.get_p_bounds(actuator_indices),
         allow_duplicate_points=True,
