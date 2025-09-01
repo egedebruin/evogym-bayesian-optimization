@@ -57,7 +57,7 @@ def main():
 
     for r in range(REPS):
         for key in strategy_keys:
-            result = parallelize(key[0], key[1], key[2], 800)
+            result = parallelize(key[0], key[1], key[2], 500)
             for repetition in range(len(result)):
                 for learn_iteration in range(len(result[repetition][0])):
                     result_dict['original_environment'].append(result[repetition][1])
