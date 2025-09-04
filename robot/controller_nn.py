@@ -6,43 +6,39 @@ import torch.nn.functional as F
 from robot.controller import Controller
 
 class RunningNorm:
-    def __init__(self, epsilon=1e-8):
+    def __init__(self, epsilon=1e-8, min_var=1e-6):
         self.mean = 0.0
         self.var = 1.0
         self.count = 0
         self.epsilon = epsilon
+        self.min_var = min_var
 
     def update(self, x, mask=None):
-        """
-        Update running mean/std.
-        x: torch.Tensor or np.ndarray
-        mask: same shape as x, with True where values are valid.
-        """
         x = np.asarray(x)
-
         if mask is not None:
-            x = x[mask]  # keep only valid values
+            x = x[mask]
         else:
             x = x.reshape(-1)
-
         if x.size == 0:
-            return  # nothing to update
-
-        batch_mean = x.mean()
-        batch_var = x.var()
+            return
+        batch_mean = float(x.mean())
+        batch_var = float(x.var())
         batch_count = x.shape[0]
-
-        # Welford update for running mean/var
+        if self.count == 0:
+            self.mean = batch_mean
+            self.var = max(batch_var, self.min_var)
+            self.count = batch_count
+            return
+        # Welford merge
         delta = batch_mean - self.mean
         tot_count = self.count + batch_count
-
         new_mean = self.mean + delta * batch_count / tot_count
         m_a = self.var * self.count
         m_b = batch_var * batch_count
-        M2 = m_a + m_b + delta**2 * self.count * batch_count / tot_count
-        new_var = M2 / tot_count
-
+        M2 = m_a + m_b + delta*delta * self.count * batch_count / tot_count
+        new_var = max(M2 / tot_count, self.min_var)
         self.mean, self.var, self.count = new_mean, new_var, tot_count
+
 
     def normalize(self, x, mask=None):
         """
@@ -64,12 +60,12 @@ class RunningNorm:
 
 class ControllerNN(Controller, nn.Module):
 
-    def __init__(self, args):
+    def __init__(self, args, velocity_norm):
         super().__init__()
 
         self.policy_optimizer = None
         self.critic_optimizer = None
-        self.gamma = 0.85
+        self.gamma = 0.95
 
         def from_args(name):
             if name not in args:
@@ -107,13 +103,18 @@ class ControllerNN(Controller, nn.Module):
 
         self.set_optimizers()
         self.velocity_indices = list(range(9, 27))
-        self.velocity_norm = RunningNorm()
+        self.training_mode = True
+        self.velocity_norm = velocity_norm
+        self.freeze_norm = False
+        self.update_weights = False
 
-    def set_optimizers(self, policy_lr=1e-10, critic_lr=1e-3):
+
+    def set_optimizers(self, policy_lr=1e-4, critic_lr=1e-4):
         # Separate params for policy and critic
         policy_params = [self.hidden_weights, self.hidden_biases,
                          self.output_weights, self.output_biases]
         critic_params = [self.critic_hidden_weights, self.critic_hidden_biases,
+                         self.critic_hidden2_weights, self.critic_hidden2_biases,
                          self.critic_output_weights, self.critic_output_biases]
 
         self.policy_optimizer = torch.optim.Adam(policy_params, lr=policy_lr)
@@ -148,13 +149,12 @@ class ControllerNN(Controller, nn.Module):
         """
         with torch.no_grad():
             processed_inputs = []
-
             vel_indices = list(range(9, 27))
 
             for sensors in sensor_inputs:
                 sensors = np.array(sensors, dtype=np.float32)
 
-                # Normalize velocity features, skip padded zeros
+                # Just normalize using *existing* stats, never update here
                 vels = sensors[vel_indices]
                 mask = (vels != 0)
                 vels_normed = self.velocity_norm.normalize(vels, mask=mask)
@@ -162,52 +162,53 @@ class ControllerNN(Controller, nn.Module):
 
                 processed_inputs.append(sensors)
 
-            # Convert to tensor (M, input_dim)
             sensor_tensor = torch.tensor(np.array(processed_inputs), dtype=torch.float32,
                                          device=self.hidden_weights.device)
 
-            # Forward per actuator
             hidden = F.relu(sensor_tensor @ self.hidden_weights + self.hidden_biases)
             raw_output = hidden @ self.output_weights + self.output_biases
             raw_actions = torch.sigmoid(raw_output).cpu().numpy()
 
         return raw_actions
 
+    def update_norm(self, sensor_input, next_sensor_input):
+        device = self.hidden_weights.device
+        vel_indices = list(range(9, 27))
+
+        # Convert list of arrays to single NumPy array first
+        sensor_input = torch.as_tensor(np.array(sensor_input, dtype=np.float32), device=device)
+        next_sensor_input = torch.as_tensor(np.array(next_sensor_input, dtype=np.float32), device=device)
+
+        # sensor_input: (M, input_dim) for one transition
+        vels = sensor_input[:, vel_indices].cpu().numpy()
+        mask = (vels != 0)
+        self.velocity_norm.update(vels, mask=mask)
+
+        next_vels = next_sensor_input[:, vel_indices].cpu().numpy()
+        next_mask = (next_vels != 0)
+        self.velocity_norm.update(next_vels, mask=next_mask)
+
     def update(self, sensor_inputs, raw_actions, rewards, next_sensor_inputs, do_policy_update):
         device = self.hidden_weights.device
-        B, M, input_dim = sensor_inputs.shape
 
-        # --- Convert to torch ---
         sensor_inputs = torch.as_tensor(sensor_inputs, dtype=torch.float32, device=device)
         raw_actions = torch.as_tensor(raw_actions, dtype=torch.float32, device=device)
         rewards = torch.as_tensor(rewards, dtype=torch.float32, device=device)
         next_sensor_inputs = torch.as_tensor(next_sensor_inputs, dtype=torch.float32, device=device)
 
-        # --- Normalize velocities (indices 9–26), skipping padded zeros ---
+        # --- Normalize using current stats (no updates) ---
         vel_indices = list(range(9, 27))
-
-        # Extract velocities and build mask
         vels = sensor_inputs[:, :, vel_indices].cpu().numpy()
         mask = (vels != 0)
-
-        # Update running stats
-        self.velocity_norm.update(vels, mask=mask)
-
-        # Normalize
         vels_normed = self.velocity_norm.normalize(vels, mask=mask)
-
-        # Put back normalized velocities
         sensor_inputs[:, :, vel_indices] = torch.tensor(vels_normed, dtype=torch.float32, device=device)
 
-        # Do the same for next_sensor_inputs
         next_vels = next_sensor_inputs[:, :, vel_indices].cpu().numpy()
         next_mask = (next_vels != 0)
         next_vels_normed = self.velocity_norm.normalize(next_vels, mask=next_mask)
         next_sensor_inputs[:, :, vel_indices] = torch.tensor(next_vels_normed, dtype=torch.float32, device=device)
 
         self.update_critic(sensor_inputs, raw_actions, rewards, next_sensor_inputs)
-
-        # --- Policy update ---
         if do_policy_update:
             self.update_policy(sensor_inputs)
 
@@ -264,10 +265,10 @@ class ControllerNN(Controller, nn.Module):
         self.hidden_biases.data.clamp_(-0.1, 0.1)
 
         # Output weights: [-2, 2]
-        self.output_weights.data.clamp_(-0.5, 0.5)
+        self.output_weights.data.clamp_(-2.0, 2.0)
 
         # Output biases: [-1, 1]
-        self.output_biases.data.clamp_(-0.1, 0.1)
+        self.output_biases.data.clamp_(-1.0, 1.0)
 
     def update_policy(self, sensor_inputs):
         device = self.hidden_weights.device

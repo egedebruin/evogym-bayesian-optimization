@@ -75,7 +75,7 @@ class BrainNN(Brain):
                 continue
             if 'output-bias' in key:
                 position = key.split('_')[1]
-                args['output_biases'][0][int(position)] = value * 0.2 - 0.1
+                args['output_biases'][0][int(position)] = value * 2 - 1
                 continue
             if 'hidden' in key:
                 position_0, position_1 = key.split('_')[1:]
@@ -83,7 +83,7 @@ class BrainNN(Brain):
                 continue
             if 'output' in key:
                 position_0, position_1 = key.split('_')[1:]
-                args['output_weights'][int(position_0)][int(position_1)] = value - 0.5
+                args['output_weights'][int(position_0)][int(position_1)] = value * 4 - 2
                 continue
 
         return args

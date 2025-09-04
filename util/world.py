@@ -1,3 +1,4 @@
+import random
 from collections import deque
 
 import numpy as np
@@ -27,7 +28,7 @@ def build_world(robot_structure, rng):
 
     return sim, viewer
 
-def run_simulator(sim, controller, sensors, viewer, simulator_length, headless, update_policy, transition_buffer):
+def run_simulator(sim, controller, sensors, viewer, simulator_length, headless, update_weights, update_norm, transition_buffer):
     sim.reset()
     extra_metrics = []
     start_position = sim.object_pos_at_time(sim.get_time(), 'robot')
@@ -53,28 +54,50 @@ def run_simulator(sim, controller, sensors, viewer, simulator_length, headless, 
             previous_position = sim.object_pos_at_time(sim.get_time(), 'robot')
 
         # ----- Learning step -----
-        if simulation_step % 5 == 4 and update_policy:
+        if simulation_step % 5 == 4:
             reward = (
                 np.mean(sim.object_pos_at_time(sim.get_time(), 'robot')[0])
                 - np.mean(previous_position[0])
-            )
+            ) * 10
 
             # Store transition
             next_sensor_input = sensors.get_input_from_sensors(sim)
+            if transition_buffer is not None:
+                transition_buffer.append((sensor_input, raw_action, reward, next_sensor_input))
 
-            transition_buffer.append((sensor_input, raw_action, reward, next_sensor_input))
+            if update_norm:
+                controller.update_norm(sensor_input, next_sensor_input)
 
-            states, actions, rewards, next_states = zip(*transition_buffer)
+            if update_weights:
+                for i in range(4):
+                    # Make sure buffer has enough samples
+                    batch_size = min(64, len(transition_buffer))
 
-            states = np.stack(states)
-            actions = np.stack(actions)
-            rewards = np.array(rewards).reshape(-1, 1)
-            next_states = np.stack(next_states)
-            for i in range(5):
-                controller.update(states, actions, rewards, next_states, False)
+                    # Sample without replacement
+                    batch = random.sample(transition_buffer, batch_size)
 
-            # Update critic and policy once
-            controller.update(states, actions, rewards, next_states, True)
+                    # Unpack batch into arrays
+                    states, actions, rewards, next_states = zip(*batch)
+                    states = np.stack(states)
+                    actions = np.stack(actions)
+                    rewards = np.array(rewards).reshape(-1, 1)
+                    next_states = np.stack(next_states)
+
+                    controller.update(states, actions, rewards, next_states, False)
+
+                # Make sure buffer has enough samples
+                batch_size = min(64, len(transition_buffer))
+
+                # Sample without replacement
+                batch = random.sample(transition_buffer, batch_size)
+
+                # Unpack batch into arrays
+                states, actions, rewards, next_states = zip(*batch)
+                states = np.stack(states)
+                actions = np.stack(actions)
+                rewards = np.array(rewards).reshape(-1, 1)
+                next_states = np.stack(next_states)
+                controller.update(states, actions, rewards, next_states, True)
 
         # Step simulation
         sim.step()
@@ -82,7 +105,6 @@ def run_simulator(sim, controller, sensors, viewer, simulator_length, headless, 
         # Render if not headless
         if not headless:
             viewer.render('screen')
-
     end_position = sim.object_pos_at_time(sim.get_time(), 'robot')
     extra_metrics = extra_metrics_for_objective_value('after', sim, extra_metrics)
     return calculate_objective_value(start_position, end_position, extra_metrics)

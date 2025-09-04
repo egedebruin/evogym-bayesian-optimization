@@ -8,7 +8,7 @@ from configs import config
 from individual import Individual
 from robot.body import Body
 from robot.active import Brain
-from robot.controller_nn import ControllerNN
+from robot.controller_nn import ControllerNN, RunningNorm
 from robot.sensors import Sensors
 from util import world, start
 
@@ -67,68 +67,74 @@ results = {
     'fitness': [],
 }
 
+file = open('test.txt', 'w')
+file.write("")
+file.close()
+
 for repetition in range(100):
-    for update_policy in [True]:
-        body = Body()
-        body.replace_grid(grid)
-        brain = Brain(5, rng)
-        individual_id = "x"
-        individual = Individual(individual_id, body, brain, 0, [])
+    body = Body()
+    body.replace_grid(grid)
+    brain = Brain(5, rng)
+    individual_id = "x"
+    individual = Individual(individual_id, body, brain, 0, [])
 
-        sim, viewer = world.build_world(grid, rng)
-        actuator_indices = sim.get_actuator_indices('robot')
+    sim, viewer = world.build_world(grid, rng)
+    actuator_indices = sim.get_actuator_indices('robot')
 
-        optimizer = BayesianOptimization(
-                f=None,
-                pbounds=brain.get_p_bounds(actuator_indices),
-                allow_duplicate_points=True,
-                random_state=int(rng.integers(low=0, high=2 ** 32)),
-                acquisition_function=acquisition.UpperConfidenceBound(kappa=config.LEARN_KAPPA,
-                                                                      random_state=int(rng.integers(low=0, high=2 ** 32)))
-            )
-        optimizer.set_gp_params(kernel=Matern(nu=config.LEARN_NU, length_scale=config.LEARN_LENGTH_SCALE, length_scale_bounds="fixed"))
-        optimizer.set_gp_params(alpha=config.LEARN_ALPHA)
+    optimizer = BayesianOptimization(
+            f=None,
+            pbounds=brain.get_p_bounds(actuator_indices),
+            allow_duplicate_points=True,
+            random_state=int(rng.integers(low=0, high=2 ** 32)),
+            acquisition_function=acquisition.UpperConfidenceBound(kappa=config.LEARN_KAPPA,
+                                                                  random_state=int(rng.integers(low=0, high=2 ** 32)))
+        )
+    optimizer.set_gp_params(kernel=Matern(nu=config.LEARN_NU, length_scale=config.LEARN_LENGTH_SCALE, length_scale_bounds="fixed"))
+    optimizer.set_gp_params(alpha=config.LEARN_ALPHA)
 
-        critic_args = create_global_critic_params(12)
+    next_point = optimizer.suggest()
+    args = brain.next_point_to_controller_values(next_point, actuator_indices)
+    critic_args = create_global_critic_params(num_actuators=12)
 
-        transition_buffer = deque(maxlen=10)
-        for bayesian_optimization_iteration in range(100):
-            next_point = optimizer.suggest()
-            args = brain.next_point_to_controller_values(next_point, actuator_indices)
-            combined_args = {**args, **critic_args}
-            torch_args = lists_to_torch_params(combined_args)
-            controller = ControllerNN(torch_args)
-            sensors = Sensors(grid)
+    transition_buffer = deque(maxlen=2000)
+    velocity_norm = RunningNorm()
+    for bayesian_optimization_iteration in range(1000):
+        combined_args = {**args, **critic_args}
+        torch_args = lists_to_torch_params(combined_args)
+        controller = ControllerNN(torch_args, velocity_norm)
+        sensors = Sensors(grid)
 
-            without_update = world.run_simulator(sim, controller, sensors, viewer, 500, True, False, transition_buffer)
-            with_update = world.run_simulator(sim, controller, sensors, viewer, 500, True, update_policy, transition_buffer)
+        without_update = world.run_simulator(sim, controller, sensors, viewer, 500, True, False, False, None)
+        with_update = world.run_simulator(sim, controller, sensors, viewer, 500, True, bayesian_optimization_iteration > 3, bayesian_optimization_iteration < 10, transition_buffer)
 
-            print(str(bayesian_optimization_iteration) + ": " + str(with_update - without_update))
+        file = open('test.txt', 'a')
+        file.write(str(bayesian_optimization_iteration) + ": " + str(with_update - without_update) + "\n")
+        file.close()
 
-            optimizer.register(params=next_point, target=with_update)
+        # optimizer.register(params=next_point, target=without_update)
 
-            # print(objective_value)
-            # args_torch = {
-            #     'hidden_weights': controller.hidden_weights.detach().clone(),
-            #     'hidden_biases': controller.hidden_biases.detach().clone(),
-            #     'output_weights': controller.output_weights.detach().clone(),
-            #     'output_biases': controller.output_biases.detach().clone(),
-            # }
-            # args = {k: v.cpu().numpy().tolist() for k, v in args_torch.items()}
+        # print(objective_value)
+        args_torch = {
+            'hidden_weights': controller.hidden_weights.detach().clone(),
+            'hidden_biases': controller.hidden_biases.detach().clone(),
+            'output_weights': controller.output_weights.detach().clone(),
+            'output_biases': controller.output_biases.detach().clone(),
+        }
+        args = {k: v.cpu().numpy().tolist() for k, v in args_torch.items()}
 
-            critic_args_torch = {
-                'critic_hidden_weights': controller.critic_hidden_weights.detach().clone(),
-                'critic_hidden_biases': controller.critic_hidden_biases.detach().clone(),
-                'critic_hidden2_weights': controller.critic_hidden2_weights.detach().clone(),
-                'critic_hidden2_biases': controller.critic_hidden2_biases.detach().clone(),
-                'critic_output_weights': controller.critic_output_weights.detach().clone(),
-                'critic_output_biases': controller.critic_output_biases.detach().clone()
-            }
+        critic_args_torch = {
+            'critic_hidden_weights': controller.critic_hidden_weights.detach().clone(),
+            'critic_hidden_biases': controller.critic_hidden_biases.detach().clone(),
+            'critic_hidden2_weights': controller.critic_hidden2_weights.detach().clone(),
+            'critic_hidden2_biases': controller.critic_hidden2_biases.detach().clone(),
+            'critic_output_weights': controller.critic_output_weights.detach().clone(),
+            'critic_output_biases': controller.critic_output_biases.detach().clone()
+        }
 
-            critic_args = {k: v.cpu().numpy().tolist() for k, v in critic_args_torch.items()}
+        critic_args = {k: v.cpu().numpy().tolist() for k, v in critic_args_torch.items()}
 
-            results['update_policy'].append(update_policy)
-            results['repetition'].append(repetition + 1)
-            results['learn_iteration'].append(bayesian_optimization_iteration)
-            results['fitness'].append(with_update)
-        pd.DataFrame(results).to_csv('test.csv')
+        results['update_policy'].append(True)
+        results['repetition'].append(repetition + 1)
+        results['learn_iteration'].append(bayesian_optimization_iteration)
+        results['fitness'].append(with_update)
+    pd.DataFrame(results).to_csv('test.csv')
