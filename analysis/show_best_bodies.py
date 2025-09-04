@@ -12,13 +12,13 @@ from analysis import body_descriptors
 
 LABELS = {
     (-1, 'none', 0): 'Individual learning',
-    (8, 'parent', 1): 'Social learning - Parent',
-    (8, 'best', 1): 'Social learning - Best - N=1',
-    (8, 'best', 8): 'Social learning - Best - N=8',
-    (8, 'random', 1): 'Social learning - Random - N=1',
-    (8, 'random', 8): 'Social learning - Random - N=8',
-    (8, 'similar', 1): 'Social learning - Similar - N=1',
-    (8, 'similar', 8): 'Social learning - Similar - N=8',
+    (8, 'parent', 1): 'Social learning\nParent',
+    (8, 'best', 1): 'Social learning\nBest - N=1',
+    (8, 'best', 8): 'Social learning\nBest - N=8',
+    (8, 'random', 1): 'Social learning\nRandom - N=1',
+    (8, 'random', 8): 'Social learning\nRandom - N=8',
+    (8, 'similar', 1): 'Social learning\nSimilar - N=1',
+    (8, 'similar', 8): 'Social learning\nSimilar - N=8',
 }
 
 EVALS_PER_GEN = 50
@@ -58,11 +58,11 @@ def plot_matrices_grid(matrices_dict, save_path=None):
 
             # Add strategy label on the left of each row
             if col_idx == 0:
-                ax.set_ylabel(label, fontsize=10, rotation=0, labelpad=80, va='center')
+                ax.set_ylabel(label, fontsize=8, rotation=0, labelpad=80, va='center')
 
             # Add repetition title at the top of each column
             if row_idx == 0:
-                ax.set_title(ENVIRONMENTS[col_idx].title(), fontsize=12, fontweight='bold', pad=10)
+                ax.set_title(ENVIRONMENTS[col_idx].title(), fontsize=8, fontweight='bold', pad=10)
 
     plt.tight_layout()
     if save_path:
