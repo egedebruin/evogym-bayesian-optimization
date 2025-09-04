@@ -1,0 +1,105 @@
+import ast
+import os
+
+import numpy as np
+import matplotlib.pyplot as plt
+
+LABELS = {
+    (-1, 'none', 0): 'Individual learning',
+    (8, 'parent', 1): 'Social learning - Parent',
+    (8, 'best', 1): 'Social learning - Best - N=1',
+    (8, 'best', 8): 'Social learning - Best - N=8',
+    (8, 'random', 1): 'Social learning - Random - N=1',
+    (8, 'random', 8): 'Social learning - Random - N=8',
+    (8, 'similar', 1): 'Social learning - Similar - N=1',
+    (8, 'similar', 8): 'Social learning - Similar - N=8',
+}
+
+COLORS = {
+    (-1, 'none', 0): 'red',
+    (8, 'best', 1): 'black',
+    (8, 'best', 8): 'grey',
+    (8, 'parent', 1): 'orange',
+    (8, 'random', 1): 'blue',
+    (8, 'random', 8): 'cyan',
+    (8, 'similar', 1): 'purple',
+    (8, 'similar', 8): 'pink',
+}
+
+def get_best_individual(folder):
+    best_individual = None
+    best_fitness = float("-inf")
+
+    file_path = os.path.join(folder, "individuals.txt")
+
+    if not os.path.exists(file_path):
+        return False  # no file found
+
+    with open(file_path, "r") as file:
+        for line in file:
+            if not line.strip():
+                continue  # Skip empty lines
+            individual = line.strip().split(";")
+            try:
+                fitness = float(individual[5])
+            except (IndexError, ValueError) as e:
+                print(f"Skipping malformed line: {line.strip()} — {e}")
+                continue
+            if fitness > best_fitness:
+                best_fitness = fitness
+                best_individual = individual
+
+    return best_individual
+
+
+def relative_activity(body: np.ndarray):
+    return np.count_nonzero(body > 2) / np.count_nonzero(body > 0)
+
+def compactness(body: np.ndarray) -> float:
+    convex_hull = body > 0
+    if True not in convex_hull:
+        return 0.0
+    new_found = True
+    while new_found:
+        new_found = False
+        false_coordinates = np.argwhere(convex_hull == False)
+        for coordinate in false_coordinates:
+            x, y = coordinate[0], coordinate[1]
+            adjacent_count = 0
+            adjacent_coordinates = []
+            for d in [-1, 1]:
+                adjacent_coordinates.append((x, y + d))
+                adjacent_coordinates.append((x + d, y))
+                adjacent_coordinates.append((x + d, y + d))
+                adjacent_coordinates.append((x + d, y - d))
+            for adj_x, adj_y in adjacent_coordinates:
+                if 0 <= adj_x < body.shape[0] and 0 <= adj_y < body.shape[1] and convex_hull[adj_x][adj_y]:
+                    adjacent_count += 1
+            if adjacent_count >= 5:
+                convex_hull[x][y] = True
+                new_found = True
+
+    return (body > 0).sum() / convex_hull.sum()
+
+def main():
+    fig, axes = plt.subplots(ncols=4, figsize=(12, 3), sharey=False)
+
+    for i, environment in enumerate(['simple', 'steps', 'carry', 'catch']):
+        for strategy in LABELS.keys():
+            for repetition in range(1, 21):
+                best_individual = get_best_individual(f'results/main/learn-50_inherit-{strategy[0]}_type-{strategy[1]}_pool-{strategy[2]}_environment-{environment}_repetition-{repetition}/')
+                if not best_individual:
+                    continue
+
+                grid = np.array(ast.literal_eval(best_individual[1]))
+
+                axes[i].scatter(relative_activity(grid), compactness(grid), c=COLORS[strategy], s=10)
+
+    for ax in axes:
+        ax.set_xlim(0, 1)
+        ax.set_ylim(0, 1)
+
+    plt.show()
+
+if __name__ == "__main__":
+    main()
