@@ -100,6 +100,7 @@ def main():
         ax.set_ylim(0, 1)
 
     plt.show()
+    plt.savefig('descriptors.pdf')
 
 if __name__ == "__main__":
     main()
