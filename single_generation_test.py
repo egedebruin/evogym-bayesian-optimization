@@ -41,11 +41,6 @@ def run(rep):
     config.INHERIT_SAMPLES = -1
     config.SOCIAL_POOL = 0
 
-    if not os.path.exists(config.FOLDER):
-        os.makedirs(config.FOLDER)
-    main.logger_setup()
-    main.set_number_of_sensors()
-
     rng = start.make_rng_seed()
 
     individuals = []
@@ -85,5 +80,10 @@ def run(rep):
     pd.DataFrame(result).to_csv(os.path.join(config.FOLDER, f'results{rep}.csv'), index=False)
 
 if __name__ == '__main__':
+    if not os.path.exists(config.FOLDER):
+        os.makedirs(config.FOLDER)
+    main.logger_setup()
+    main.set_number_of_sensors()
+
     for repetition in range(200):
         run(repetition)
