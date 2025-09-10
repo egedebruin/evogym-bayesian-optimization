@@ -36,7 +36,6 @@ STRATEGIES = [
 ]
 
 def run(rep):
-    config.FOLDER = 'results/single_generation_test/'
     config.INHERIT_TYPE = 'none'
     config.INHERIT_SAMPLES = -1
     config.SOCIAL_POOL = 0
@@ -80,6 +79,7 @@ def run(rep):
     pd.DataFrame(result).to_csv(os.path.join(config.FOLDER, f'results{rep}.csv'), index=False)
 
 if __name__ == '__main__':
+    config.FOLDER = 'results/single_generation_test/'
     if not os.path.exists(config.FOLDER):
         os.makedirs(config.FOLDER)
     main.logger_setup()
