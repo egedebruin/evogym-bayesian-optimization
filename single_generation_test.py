@@ -23,6 +23,32 @@ def get_offspring(population, generation_index, parent_selection, rng: np.random
         offspring.append(new_individual)
     return selected_individuals, offspring
 
+def random_robots(rng):
+    individuals = []
+    for i in range(config.POP_SIZE):
+        body_size = rng.integers(config.MIN_INITIAL_SIZE, config.MAX_INITIAL_SIZE + 1)
+        body = Body(config.GRID_LENGTH, body_size, rng)
+        brain = Brain(config.GRID_LENGTH, rng)
+        individual_id = f"0-{i}"
+        individual = Individual(individual_id, body, brain, 0, [])
+        individuals.append(individual)
+    return individuals
+
+def random_robots_based_on_one(rng):
+    config.MAX_ADD_MUTATION = 5
+    config.MAX_DELETE_MUTATION = 5
+    config.MAX_CHANGE_MUTATION = 5
+    individuals = []
+    body_size = rng.integers(config.MIN_INITIAL_SIZE, config.MAX_INITIAL_SIZE + 1)
+    body = Body(config.GRID_LENGTH, body_size, rng)
+    brain = Brain(config.GRID_LENGTH, rng)
+    individual_id = f"0-0"
+    individual = Individual(individual_id, body, brain, 0, [])
+    individuals.append(individual)
+    for i in range(1, config.POP_SIZE):
+        new_individual = individual.generate_new_individual(0, i, rng)
+        individuals.append(new_individual)
+    return individuals
 
 STRATEGIES = [
     (-1, 'none', 0),
@@ -42,14 +68,7 @@ def run(rep):
 
     rng = start.make_rng_seed()
 
-    individuals = []
-    for i in range(config.POP_SIZE):
-        body_size = rng.integers(config.MIN_INITIAL_SIZE, config.MAX_INITIAL_SIZE + 1)
-        body = Body(config.GRID_LENGTH, body_size, rng)
-        brain = Brain(config.GRID_LENGTH, rng)
-        individual_id = f"0-{i}"
-        individual = Individual(individual_id, body, brain, 0, [])
-        individuals.append(individual)
+    individuals = random_robots_based_on_one(rng)
 
     population = main.run_generation(individuals, rng)
     parent_selection = Selection(config.OFFSPRING_SIZE, config.PARENT_SELECTION, {'pool_size': config.PARENT_POOL})
