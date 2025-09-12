@@ -3,6 +3,8 @@ import os
 
 import numpy as np
 import matplotlib.pyplot as plt
+import pandas as pd
+
 
 def get_best_individual(folder):
     best_individual = None
@@ -61,13 +63,13 @@ def compactness(body: np.ndarray) -> float:
 
 LABELS = {
     (-1, 'none', 0): 'Individual learning',
-    (8, 'parent', 1): 'Social learning - Parent',
-    (8, 'best', 1): 'Social learning - Best - N=1',
-    (8, 'best', 8): 'Social learning - Best - N=8',
-    (8, 'random', 1): 'Social learning - Random - N=1',
-    (8, 'random', 8): 'Social learning - Random - N=8',
-    (8, 'similar', 1): 'Social learning - Similar - N=1',
-    (8, 'similar', 8): 'Social learning - Similar - N=8',
+    (8, 'parent', 1): 'Parent',
+    (8, 'best', 1): 'Best - N=1',
+    (8, 'best', 8): 'Best - N=8',
+    (8, 'random', 1): 'Random - N=1',
+    (8, 'random', 8): 'Random - N=8',
+    (8, 'similar', 1): 'Similar - N=1',
+    (8, 'similar', 8): 'Similar - N=8',
 }
 
 COLORS = {
@@ -87,48 +89,58 @@ def main():
     environments = ['simple', 'steps', 'carry', 'catch']
 
     for i, environment in enumerate(environments):
+        csv_data = {
+            'environment': [],
+            'strategy': [],
+            'relative_activity': [],
+            'compactness': [],
+        }
         for strategy in LABELS.keys():
             for repetition in range(1, 21):
                 best_individual = get_best_individual(
-                    f'results/learn-50_inherit-{strategy[0]}_type-{strategy[1]}_pool-{strategy[2]}_environment-{environment}_repetition-{repetition}/'
+                    f'results/main/learn-50_inherit-{strategy[0]}_type-{strategy[1]}_pool-{strategy[2]}_environment-{environment}_repetition-{repetition}/'
                 )
                 if not best_individual:
                     continue
 
                 grid = np.array(ast.literal_eval(best_individual[1]))
+                csv_data['environment'].append(environment)
+                csv_data['strategy'].append(LABELS[strategy])
+                csv_data['relative_activity'].append(relative_activity(grid))
+                csv_data['compactness'].append(compactness(grid))
 
-                axes[i].scatter(
-                    relative_activity(grid),
-                    compactness(grid),
-                    c=COLORS[strategy],
-                    s=15,
-                    alpha=0.6,
-                    label=LABELS[strategy] if repetition == 1 else None  # add label only once
-                )
+                # axes[i].scatter(
+                #     relative_activity(grid),
+                #     compactness(grid),
+                #     c=COLORS[strategy],
+                #     s=15,
+                #     alpha=0.6,
+                #     label=LABELS[strategy] if repetition == 1 else None  # add label only once
+                # )
+        pd.DataFrame(csv_data).to_csv(f'descriptors-{environment}.txt', index=False, sep='\t')
+        # axes[i].set_xlim(0, 1)
+        # axes[i].set_ylim(0, 1)
+        # axes[i].set_title(environment.capitalize(), fontsize=12)
+        # axes[i].set_xlabel("Relative activity")
 
-        axes[i].set_xlim(0, 1)
-        axes[i].set_ylim(0, 1)
-        axes[i].set_title(environment.capitalize(), fontsize=12)
-        axes[i].set_xlabel("Relative activity")
-
-    axes[0].set_ylabel("Compactness")
+    # axes[0].set_ylabel("Compactness")
 
     # Create one legend for the whole figure
-    handles, labels = axes[0].get_legend_handles_labels()
-    fig.legend(
-        handles,
-        labels,
-        loc="upper center",
-        bbox_to_anchor=(0.5, 1.15),
-        ncol=4,
-        fontsize=9,
-        frameon=False
-    )
-
-    fig.tight_layout(rect=[0, 0, 1, 1])  # leave space for legend
-
-    plt.savefig("descriptors.pdf")
-    plt.show()
+    # handles, labels = axes[0].get_legend_handles_labels()
+    # fig.legend(
+    #     handles,
+    #     labels,
+    #     loc="upper center",
+    #     bbox_to_anchor=(0.5, 1.15),
+    #     ncol=4,
+    #     fontsize=9,
+    #     frameon=False
+    # )
+    #
+    # fig.tight_layout(rect=[0, 0, 1, 1])  # leave space for legend
+    #
+    # # plt.savefig("descriptors.pdf")
+    # plt.show()
 
 
 if __name__ == "__main__":
