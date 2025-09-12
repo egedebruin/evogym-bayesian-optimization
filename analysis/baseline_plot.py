@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import pandas as pd
 import seaborn as sns
 from matplotlib import rcParams
 import plot  # Assumes you have a module `plot` with `get_data`
@@ -11,14 +12,14 @@ REPETITIONS = 20
 SUB_FOLDER = 'baseline'
 
 LABELS = {
-    (-1, 'none', 0): 'Individual learning',
-    (8, 'best', 1): 'Social learning - Best - N=1',
-    (8, 'best', 8): 'Social learning - Best - N=8',
-    (8, 'parent', 1): 'Social learning - Parent',
-    (8, 'random', 1): 'Social learning - Random - N=1',
-    (8, 'random', 8): 'Social learning - Random - N=8',
-    (8, 'similar', 1): 'Social learning - Similar - N=1',
-    (8, 'similar', 8): 'Social learning - Similar - N=8',
+    (-1, 'none', 0): 'Individual',
+    (8, 'best', 1): 'Best - N=1',
+    (8, 'best', 8): 'Best - N=8',
+    (8, 'parent', 1): 'Parent',
+    (8, 'random', 1): 'Random - N=1',
+    (8, 'random', 8): 'Random - N=8',
+    (8, 'similar', 1): 'Similar - N=1',
+    (8, 'similar', 8): 'Similar - N=8',
 }
 
 COLORS = {
@@ -66,7 +67,7 @@ def make_the_plot(inherit, inherit_type, inherit_pool, environment, ax):
 
         max_vals = np.max(data_array, axis=1)
         running_max = np.maximum.accumulate(max_vals)
-        curves.append(running_max)
+        curves.append(max_vals)
 
     if not curves:
         return
@@ -80,6 +81,11 @@ def make_the_plot(inherit, inherit_type, inherit_pool, environment, ax):
 
     ax.plot(x_vals, mean_vals, label=label, color=color, linestyle=LINE_STYLES.get(key))
     ax.fill_between(x_vals, q25, q75, color=color, alpha=0.2)
+
+    csv_data = {'cat': [LABELS[key] for _ in range(50)], 'x': range(50), 'y': np.mean(curves, axis=0),
+                'ymin': np.percentile(curves, 25, axis=0),
+                'ymax': np.percentile(curves, 25, axis=0)}
+    pd.DataFrame(csv_data).to_csv(f'performance-line-{environment}-{key[1]}-{key[2]}.txt', index=False, sep='\t')
 
 
 def main():
@@ -97,10 +103,10 @@ def main():
         "lines.linewidth": 2.2
     })
 
-    environments = ['simple', 'steps', 'carry', 'catch']
+    environments = ['catch']
     strategy_keys = list(LABELS.keys())  # 6 total strategies
 
-    fig, axes = plt.subplots(nrows=len(environments), figsize=(10, 10), sharey=False)
+    fig, axes = plt.subplots(nrows=2, figsize=(10, 10), sharey=False)
     fig.subplots_adjust(top=0.85, right=0.78)  # Make space for legend
 
     for i, env in enumerate(environments):
@@ -119,7 +125,7 @@ def main():
 
     plt.tight_layout(rect=[0, 0, 0.75, 1])  # Leave room for legend
     plt.show()
-    plt.savefig(f'plot.pdf')
+    # plt.savefig(f'plot.pdf')
 
 
 if __name__ == '__main__':
