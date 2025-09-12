@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import pandas as pd
 import seaborn as sns
 from matplotlib import rcParams
 import plot  # Your custom module
@@ -7,18 +8,18 @@ import plot  # Your custom module
 # Constants
 POP_SIZE = 200
 EVALS_PER_GEN = 50
-REPETITIONS = 10
+REPETITIONS = 20
 SUB_FOLDER = 'baseline'
 
 LABELS = {
-    (-1, 'none', 0): 'Individual learning',
-    (8, 'best', 1): 'Social learning - Best - N=1',
-    (8, 'best', 8): 'Social learning - Best - N=8',
-    (8, 'parent', 1): 'Social learning - Parent',
-    (8, 'random', 1): 'Social learning - Random - N=1',
-    (8, 'random', 8): 'Social learning - Random - N=8',
-    (8, 'similar', 1): 'Social learning - Similar - N=1',
-    (8, 'similar', 8): 'Social learning - Similar - N=8',
+    (-1, 'none', 0): 'Individual',
+    (8, 'best', 1): 'Best - N=1',
+    (8, 'best', 8): 'Best - N=8',
+    (8, 'parent', 1): 'Parent',
+    (8, 'random', 1): 'Random - N=1',
+    (8, 'random', 8): 'Random - N=8',
+    (8, 'similar', 1): 'Similar - N=1',
+    (8, 'similar', 8): 'Similar - N=8',
 }
 
 COLORS = {
@@ -58,66 +59,67 @@ def collect_data(inherit, inherit_type, inherit_pool, environment):
 
 def main():
     # Style
-    sns.set_theme(style="whitegrid")
-    rcParams.update({
-        "font.family": "serif",
-        "font.serif": ["Georgia"],
-        "axes.titlesize": 16,
-        "axes.labelsize": 14,
-        "legend.fontsize": 11,
-        "xtick.labelsize": 12,
-        "ytick.labelsize": 12,
-        "axes.linewidth": 1.2,
-        "lines.linewidth": 2.2
-    })
+    # sns.set_theme(style="whitegrid")
+    # rcParams.update({
+    #     "font.family": "serif",
+    #     "font.serif": ["Georgia"],
+    #     "axes.titlesize": 16,
+    #     "axes.labelsize": 14,
+    #     "legend.fontsize": 11,
+    #     "xtick.labelsize": 12,
+    #     "ytick.labelsize": 12,
+    #     "axes.linewidth": 1.2,
+    #     "lines.linewidth": 2.2
+    # })
 
     environments = ['simple', 'steps', 'carry', 'catch']
     strategy_keys = list(LABELS.keys())
 
-    fig, axes = plt.subplots(nrows=len(environments), figsize=(12, 10))
-    fig.subplots_adjust(top=0.9, right=0.75)  # Leave room on the right for the legend
+    # fig, axes = plt.subplots(nrows=len(environments), figsize=(12, 10))
+    # fig.subplots_adjust(top=0.9, right=0.75)  # Leave room on the right for the legend
 
     for i, env in enumerate(environments):
-        ax = axes[i]
+        # ax = axes[i]
 
-        data = []
+        data = {}
         box_colors = []
         for key in strategy_keys:
             values = collect_data(*key, env)
-            data.append(values)
+            data[LABELS[key]] = values
             box_colors.append(COLORS[key])
+        pd.DataFrame(data).to_csv(f'performance-{env}.txt', index=False, sep='\t')
 
-        # Make the boxplot with numbers 1 to 8
-        positions = np.arange(1, len(strategy_keys) + 1)
-        bplot = ax.boxplot(
-            data,
-            patch_artist=True,
-            positions=positions,
-            vert=True
-        )
-
-        # Color boxes
-        for patch, color in zip(bplot['boxes'], box_colors):
-            patch.set_facecolor(color)
-
-        ax.set_title(f"Environment: {env.capitalize()}", weight='bold', pad=10)
-        ax.set_ylabel("Final Fitness")
-        ax.set_xticks(positions)
-        ax.set_xticklabels([str(i) for i in positions])
-
-    # Create legend with labels and colors
-    legend_handles = []
-    for idx, key in enumerate(strategy_keys):
-        handle = plt.Line2D(
-            [], [], marker='s', color='w', markerfacecolor=COLORS[key], markersize=10,
-            label=f"{idx + 1}: {LABELS[key]}"
-        )
-        legend_handles.append(handle)
-
-    fig.legend(handles=legend_handles, loc='center right', title="Strategies", frameon=False)
-
-    plt.tight_layout(rect=[0, 0, 0.75, 1])  # Space for legend
-    plt.savefig('boxplots_numbered.pdf')
+    #     # Make the boxplot with numbers 1 to 8
+    #     positions = np.arange(1, len(strategy_keys) + 1)
+    #     bplot = ax.boxplot(
+    #         data,
+    #         patch_artist=True,
+    #         positions=positions,
+    #         vert=True
+    #     )
+    #
+    #     # Color boxes
+    #     for patch, color in zip(bplot['boxes'], box_colors):
+    #         patch.set_facecolor(color)
+    #
+    #     ax.set_title(f"Environment: {env.capitalize()}", weight='bold', pad=10)
+    #     ax.set_ylabel("Final Fitness")
+    #     ax.set_xticks(positions)
+    #     ax.set_xticklabels([str(i) for i in positions])
+    #
+    # # Create legend with labels and colors
+    # legend_handles = []
+    # for idx, key in enumerate(strategy_keys):
+    #     handle = plt.Line2D(
+    #         [], [], marker='s', color='w', markerfacecolor=COLORS[key], markersize=10,
+    #         label=f"{idx + 1}: {LABELS[key]}"
+    #     )
+    #     legend_handles.append(handle)
+    #
+    # fig.legend(handles=legend_handles, loc='center right', title="Strategies", frameon=False)
+    #
+    # plt.tight_layout(rect=[0, 0, 0.75, 1])  # Space for legend
+    # plt.savefig('boxplots_numbered.pdf')
 
 
 if __name__ == '__main__':
