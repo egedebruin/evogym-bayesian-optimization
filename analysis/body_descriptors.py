@@ -98,7 +98,7 @@ def main():
         for strategy in LABELS.keys():
             for repetition in range(1, 21):
                 best_individual = get_best_individual(
-                    f'results/main/learn-50_inherit-{strategy[0]}_type-{strategy[1]}_pool-{strategy[2]}_environment-{environment}_repetition-{repetition}/'
+                    f'results/learn-50_inherit-{strategy[0]}_type-{strategy[1]}_pool-{strategy[2]}_environment-{environment}_repetition-{repetition}/'
                 )
                 if not best_individual:
                     continue
