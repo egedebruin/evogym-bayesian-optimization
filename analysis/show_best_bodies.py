@@ -12,67 +12,17 @@ from analysis import body_descriptors
 
 LABELS = {
     (-1, 'none', 0): 'Individual learning',
-    (8, 'parent', 1): 'Social learning\nParent',
-    (8, 'best', 1): 'Social learning\nBest - N=1',
-    (8, 'best', 8): 'Social learning\nBest - N=8',
-    (8, 'random', 1): 'Social learning\nRandom - N=1',
-    (8, 'random', 8): 'Social learning\nRandom - N=8',
-    (8, 'similar', 1): 'Social learning\nSimilar - N=1',
-    (8, 'similar', 8): 'Social learning\nSimilar - N=8',
+    (8, 'parent', 1): 'Parent',
+    (8, 'best', 1): 'Best N=1',
+    (8, 'best', 8): 'Best N=8',
+    (8, 'similar', 1): 'Similar - N=1',
+    (8, 'similar', 8): 'Similar - N=8',
+    (8, 'random', 1): 'Random - N=1',
+    (8, 'random', 8): 'Random - N=8',
 }
 
 EVALS_PER_GEN = 50
 ENVIRONMENTS = ['simple', 'steps', 'carry', 'catch']
-
-def plot_matrices_grid(matrices_dict, save_path=None):
-    """
-    Plots a grid of matrices where rows are strategies and columns are repetitions.
-
-    Parameters:
-    - matrices_dict: Dictionary where keys are strategy labels, values are lists of 5x5 matrices.
-    - save_path: Optional path to save the image.
-    """
-    colors = ['white', 'black', 'grey', 'orange', 'blue']
-    cmap = ListedColormap(colors)
-
-    strategy_labels = list(matrices_dict.keys())
-    num_strategies = len(strategy_labels)
-    num_repetitions = max(len(matrices_dict[label]) for label in strategy_labels)
-
-    fig, axes = plt.subplots(num_strategies, num_repetitions, figsize=(num_repetitions, num_strategies))
-
-    if num_strategies == 1:
-        axes = np.array([axes])
-    if num_repetitions == 1:
-        axes = axes[:, np.newaxis]
-
-    for row_idx, label in enumerate(strategy_labels):
-        repetitions = matrices_dict[label]
-        for col_idx in range(num_repetitions):
-            ax = axes[row_idx, col_idx]
-            if col_idx < len(repetitions):
-                if repetitions[col_idx] is not None:
-                    ax.imshow(repetitions[col_idx], cmap=cmap, vmin=0, vmax=4)
-            ax.set_xticks([])
-            ax.set_yticks([])
-
-            # Add strategy label on the left of each row
-            if col_idx == 0:
-                ax.set_ylabel(label, fontsize=8, rotation=0, labelpad=80, va='center')
-
-            # Add repetition title at the top of each column
-            if row_idx == 0:
-                ax.set_title(ENVIRONMENTS[col_idx].title(), fontsize=8, fontweight='bold', pad=10)
-
-    plt.tight_layout()
-    if save_path:
-        plt.savefig(save_path, bbox_inches='tight')
-    plt.savefig(f'morphologies.pdf')
-    plt.show()
-
-# =============================
-# Load the grids for all strategies and repetitions
-# =============================
 strategy_keys = list(LABELS.keys())
 matrices_dict = {}
 
@@ -85,7 +35,6 @@ for key in strategy_keys:
         best_value = 0
         for repetition in range(1, 21):
             folder = f'results/learn-{EVALS_PER_GEN}_inherit-{key[0]}_type-{key[1]}_pool-{key[2]}_environment-{environment}_repetition-{repetition}/'
-            print(f'Loading: {folder}')
 
             best_individual = body_descriptors.get_best_individual(folder)
             if not best_individual:
@@ -97,4 +46,15 @@ for key in strategy_keys:
         matrices_dict[label].append(best_grid)
 
 # Plot all strategies in a grid
-plot_matrices_grid(matrices_dict)
+for matrices in matrices_dict.values():
+    result = ""
+    for matrix in matrices:
+        if matrix is None:
+            continue
+        result += '\\vsrevogym{5}{5}{'
+        for row in matrix:
+            for col in row:
+                result += str(int(col))
+            result += '-'
+        result = result[:-1] + '} &'
+    print(result[:-1] + "\\\\")
