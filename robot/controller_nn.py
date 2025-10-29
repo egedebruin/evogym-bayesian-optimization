@@ -143,7 +143,7 @@ class ControllerNN(Controller, nn.Module):
         ]:
             target.data.copy_(tau * source.data + (1.0 - tau) * target.data)
 
-    def control(self, sensor_inputs):
+    def control(self, sensor_input):
         """
         sensor_inputs: list of length M, each element = list/array of input_dim features
         """
@@ -151,7 +151,7 @@ class ControllerNN(Controller, nn.Module):
             processed_inputs = []
             vel_indices = list(range(9, 27))
 
-            for sensors in sensor_inputs:
+            for sensors in sensor_input:
                 sensors = np.array(sensors, dtype=np.float32)
 
                 # Just normalize using *existing* stats, never update here
@@ -167,9 +167,10 @@ class ControllerNN(Controller, nn.Module):
 
             hidden = F.relu(sensor_tensor @ self.hidden_weights + self.hidden_biases)
             raw_output = hidden @ self.output_weights + self.output_biases
-            raw_actions = torch.sigmoid(raw_output).cpu().numpy()
+            raw_action = torch.sigmoid(raw_output).cpu().numpy()
+            print(raw_action)
 
-        return raw_actions
+        return raw_action, {}
 
     def update_norm(self, sensor_input, next_sensor_input):
         device = self.hidden_weights.device
@@ -219,14 +220,7 @@ class ControllerNN(Controller, nn.Module):
         rewards: (B, 1)
         next_sensor_inputs: (B, M, input_dim)
         """
-        device = self.hidden_weights.device
         B, M, input_dim = sensor_inputs.shape
-
-        # Convert to tensors
-        sensor_inputs = torch.as_tensor(sensor_inputs, dtype=torch.float32, device=device)
-        raw_actions = torch.as_tensor(raw_actions, dtype=torch.float32, device=device)
-        rewards = torch.as_tensor(rewards, dtype=torch.float32, device=device)
-        next_sensor_inputs = torch.as_tensor(next_sensor_inputs, dtype=torch.float32, device=device)
 
         # Concatenate all actuator states and actions per batch
         critic_inputs = torch.cat([sensor_inputs.reshape(B, -1), raw_actions.reshape(B, -1)], dim=-1)
@@ -271,10 +265,8 @@ class ControllerNN(Controller, nn.Module):
         self.output_biases.data.clamp_(-1.0, 1.0)
 
     def update_policy(self, sensor_inputs):
-        device = self.hidden_weights.device
         B, M, input_dim = sensor_inputs.shape
 
-        sensor_inputs = torch.as_tensor(sensor_inputs, dtype=torch.float32, device=device)
         all_actions = []
 
         for m in range(M):

@@ -2,24 +2,29 @@ import pandas as pd
 from matplotlib import pyplot as plt
 
 TO_COLOR = {
-    True: 'red',
-    False: 'blue',
+    ('bo', 'DDPG'): 'red',
+    ('rl', 'DDPG'): 'blue',
+    ('rl', 'PPO'): 'black',
+    ('borl', 'DDPG'): 'green',
 }
 
-df = pd.read_csv('test.csv')
+df = pd.read_csv('results.csv')
 
-groups = df.groupby('update_policy')
+groups = df.groupby(['strategy', 'rl_type'])
 
-for update_policy, group in groups:
+for experiment, group in groups:
+
     group['fitness_so_far'] = group.groupby('repetition')['fitness'].cummax()
 
-    summary = group.groupby('learn_iteration')['fitness_so_far'].agg(
-        mean='mean',
-        p25=lambda x: x.quantile(0.25),
-        p75=lambda x: x.quantile(0.75)
-    ).reset_index()
+    # Plot each repetition as an individual line
+    for rep, rep_data in group.groupby('repetition'):
+        plt.plot(
+            rep_data['learn_iteration'],
+            rep_data['fitness'],
+            color=TO_COLOR[experiment],
+        )
 
-    plt.plot(summary['learn_iteration'], summary['mean'], color=TO_COLOR[update_policy])
-    plt.fill_between(summary['learn_iteration'], summary['p25'], summary['p75'], alpha=0.2, color=TO_COLOR[update_policy])
-
+plt.xlabel('Learning Iteration')
+plt.ylabel('Fitness so far')
+plt.title('All Repetition Runs')
 plt.show()
