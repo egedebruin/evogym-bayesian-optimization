@@ -139,7 +139,6 @@ def run_simulator(sim, controller, sensors, viewer, simulator_length, headless, 
         logp_per_timestep = logp_tensor.sum(dim=1)  # [T]
 
         for i in range(5):
-            # print(f"EPOCH {i+1}/5")
             controller.ppo_update(
                 obs=obs_tensor,
                 actions=act_tensor,
@@ -148,7 +147,6 @@ def run_simulator(sim, controller, sensors, viewer, simulator_length, headless, 
                 values=val_tensor,
                 last_sensor_input=sensor_input
             )
-            # print()
 
     end_position = sim.object_pos_at_time(sim.get_time(), 'robot')
     extra_metrics = extra_metrics_for_objective_value('after', sim, extra_metrics)

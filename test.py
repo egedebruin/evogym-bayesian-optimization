@@ -1,3 +1,12 @@
+import concurrent.futures
+import os
+
+# Force single-threaded execution
+os.environ["OMP_NUM_THREADS"] = "1"       # OpenMP
+os.environ["MKL_NUM_THREADS"] = "1"       # Intel MKL
+os.environ["OPENBLAS_NUM_THREADS"] = "1"  # OpenBLAS
+os.environ["NUMEXPR_NUM_THREADS"] = "1"   # NumExpr
+
 import random
 from collections import deque
 
@@ -85,7 +94,7 @@ def everybody_do_the_vroom(rng, grid, strategy, rl_type):
     best_value = 0
     best_args = None
     values = []
-    for iteration in range(200):
+    for iteration in range(300):
         if iteration == 0 or strategy == ONLY_BO or (strategy == BO_AND_RL and iteration < 50):
             next_point = optimizer.suggest()
             args = brain.next_point_to_controller_values(next_point, actuator_indices)
@@ -151,26 +160,26 @@ def main():
         'fitness': [],
         'rl_type': [],
     }
+    everybody_do_the_vroom(rng, grid, ONLY_RL, PPO)
+    with concurrent.futures.ProcessPoolExecutor(max_workers=10) as executor:
+        futures = []
+        for repetition in range(1, 6):
+            for strategy in [ONLY_RL, ONLY_BO, BO_AND_RL]:
+                if strategy == ONLY_RL:
+                    future = executor.submit(everybody_do_the_vroom, rng, grid, strategy, PPO)
+                    futures.append((future, repetition, strategy, PPO))
+                future = executor.submit(everybody_do_the_vroom, rng, grid, strategy, DDPG)
+                futures.append((future, repetition, strategy, DDPG))
 
-    for repetition in range(1, 2):
-        print('REPETITION: ', repetition)
-        for strategy in [ONLY_RL, ONLY_BO, BO_AND_RL]:
-            if strategy == ONLY_RL:
-                values = everybody_do_the_vroom(rng, grid, strategy, PPO)
-                for learn_iteration, value in enumerate(values):
-                    results['strategy'].append(strategy)
-                    results['repetition'].append(repetition)
-                    results['learn_iteration'].append(learn_iteration)
-                    results['fitness'].append(value)
-                    results['rl_type'].append(PPO)
-            continue
-            values = everybody_do_the_vroom(rng, grid, strategy, DDPG)
-            for learn_iteration, value in enumerate(values):
-                results['strategy'].append(strategy)
-                results['repetition'].append(repetition)
-                results['learn_iteration'].append(learn_iteration)
-                results['fitness'].append(value)
-                results['rl_type'].append(DDPG)
+    # Collect results
+    for future, repetition, strategy, rl_type in futures:
+        values = future.result()
+        for learn_iteration, value in enumerate(values):
+            results['strategy'].append(strategy)
+            results['repetition'].append(repetition)
+            results['learn_iteration'].append(learn_iteration)
+            results['fitness'].append(value)
+            results['rl_type'].append(rl_type)
 
     pd.DataFrame(results).to_csv('results.csv')
 

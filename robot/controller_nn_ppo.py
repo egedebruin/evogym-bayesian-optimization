@@ -9,12 +9,13 @@ class ControllerNNPPO(Controller, nn.Module):
     def __init__(self, args, velocity_norm):
         super().__init__()
 
-        self.gamma = 0.99  # Shorter-term focus
-        self.lam = 0.97  # Less smoothing, faster reaction
-        self.clip_eps = 0.3  # Allow bigger updates
-        self.entropy_coef = 0.05  # Focus on exploiting
-        self.value_coef = 0.2  # Prioritize policy learning
-        self.max_grad_norm = 0.5  # Allow stronger updates
+        self.gamma = 0.99 # 0.95 -> 0.99, short-term -> long-term
+        self.lam = 0.97 # 0.9 -> 0.99, stable gradients -> noisy gradients
+        self.clip_eps = 0.3 # 0.1 -> 0.3, low changes -> high changes
+        self.entropy_coef = 0.05 # 0.001 -> 0.1, fast convergence -> exploration
+        self.value_coef = 0.2 # 0.1 -> 1.0, focus on policy -> focus on value
+        self.max_grad_norm = 0.5 # 0.3 -> 1.0, lower gradients -> higher gradients
+        self.learning_rate = 1e-2 # 1e-5 -> 3e-3, slow updates -> fast updates
 
         def from_args(name):
             if name not in args:
@@ -38,17 +39,12 @@ class ControllerNNPPO(Controller, nn.Module):
         self.velocity_norm = velocity_norm
         self.velocity_indices = list(range(9, 27))
 
-        self.log_std = nn.Parameter(torch.ones_like(self.output_biases) * -3)
+        self.log_std = nn.Parameter(torch.ones_like(self.output_biases) * -2)
 
-        self.set_optimizers()
+        self.set_optimizers(self.learning_rate)
 
-    def set_optimizers(self, lr=1e-2, log_std_lr=1e-2):
-        # collect all params except log_std
-        params_except_log_std = [p for n, p in self.named_parameters() if n != 'log_std']
-        self.optimizer = torch.optim.Adam([
-            {'params': params_except_log_std, 'lr': lr},
-            {'params': [self.log_std], 'lr': log_std_lr}
-        ])
+    def set_optimizers(self, lr):
+        self.optimizer = torch.optim.Adam(self.parameters(), lr=lr)
 
     def update_norm(self, sensor_input, next_sensor_input):
         device = self.hidden_weights.device
@@ -107,6 +103,20 @@ class ControllerNNPPO(Controller, nn.Module):
         returns = advantages + values
         return advantages, returns
 
+    def clip_policy_params(self):
+        # Hidden weights: [-1, 1]
+        self.hidden_weights.data.clamp_(-1.0, 1.0)
+
+        # Hidden biases: [-0.1, 0.1]
+        self.hidden_biases.data.clamp_(-0.1, 0.1)
+
+        # Output weights: [-2, 2]
+        self.output_weights.data.clamp_(-2.0, 2.0)
+
+        # Output biases: [-1, 1]
+        self.output_biases.data.clamp_(-1.0, 1.0)
+
+
     def ppo_update(self, obs, actions, log_probs_old, rewards, values, last_sensor_input, clip_eps=None):
         if clip_eps is None:
             clip_eps = self.clip_eps
@@ -162,6 +172,7 @@ class ControllerNNPPO(Controller, nn.Module):
         else:
             torch.nn.utils.clip_grad_norm_(self.parameters(), self.max_grad_norm)
             self.optimizer.step()
+        self.clip_policy_params()
 
         return {
             "loss": loss.item(),
@@ -176,7 +187,6 @@ class ControllerNNPPO(Controller, nn.Module):
             "logp_std": log_probs.std().item()
         }
 
-    # --- Interface ---
     def control(self, sensor_input):
         obs_tensor = torch.tensor(
             np.array(sensor_input, dtype=np.float32), device=self.hidden_weights.device

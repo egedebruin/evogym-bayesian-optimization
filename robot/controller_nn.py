@@ -66,6 +66,9 @@ class ControllerNN(Controller, nn.Module):
         self.policy_optimizer = None
         self.critic_optimizer = None
         self.gamma = 0.95
+        self.policy_learning_rate = 1e-4
+        self.critic_learning_rate = 1e-4
+        self.tau = 0.01
 
         def from_args(name):
             if name not in args:
@@ -101,7 +104,7 @@ class ControllerNN(Controller, nn.Module):
         self.target_critic_output_biases = nn.Parameter(self.critic_output_biases.clone().detach(),
                                                         requires_grad=False)
 
-        self.set_optimizers()
+        self.set_optimizers(self.policy_learning_rate, self.critic_learning_rate)
         self.velocity_indices = list(range(9, 27))
         self.training_mode = True
         self.velocity_norm = velocity_norm
@@ -109,7 +112,7 @@ class ControllerNN(Controller, nn.Module):
         self.update_weights = False
 
 
-    def set_optimizers(self, policy_lr=1e-4, critic_lr=1e-4):
+    def set_optimizers(self, policy_lr, critic_lr):
         # Separate params for policy and critic
         policy_params = [self.hidden_weights, self.hidden_biases,
                          self.output_weights, self.output_biases]
@@ -132,7 +135,7 @@ class ControllerNN(Controller, nn.Module):
         q_value = h2 @ self.target_critic_output_weights + self.target_critic_output_biases
         return q_value.squeeze(-1)
 
-    def soft_update_target(self, tau=0.01):
+    def soft_update_target(self):
         for target, source in [
             (self.target_critic_hidden_weights, self.critic_hidden_weights),
             (self.target_critic_hidden_biases, self.critic_hidden_biases),
@@ -141,7 +144,7 @@ class ControllerNN(Controller, nn.Module):
             (self.target_critic_output_weights, self.critic_output_weights),
             (self.target_critic_output_biases, self.critic_output_biases),
         ]:
-            target.data.copy_(tau * source.data + (1.0 - tau) * target.data)
+            target.data.copy_(self.tau * source.data + (1.0 - self.tau) * target.data)
 
     def control(self, sensor_input):
         """
@@ -168,7 +171,6 @@ class ControllerNN(Controller, nn.Module):
             hidden = F.relu(sensor_tensor @ self.hidden_weights + self.hidden_biases)
             raw_output = hidden @ self.output_weights + self.output_biases
             raw_action = torch.sigmoid(raw_output).cpu().numpy()
-            print(raw_action)
 
         return raw_action, {}
 
