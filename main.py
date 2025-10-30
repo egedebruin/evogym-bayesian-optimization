@@ -74,11 +74,11 @@ def main():
 
 	parent_selection = Selection(config.OFFSPRING_SIZE, config.PARENT_SELECTION, {'pool_size': config.PARENT_POOL})
 	survivor_selection = Selection(config.POP_SIZE, config.SURVIVOR_SELECTION)
-	for i in range(number_of_generations):
-		if i < num_generations:
+	for generation_index in range(1, number_of_generations + 1):
+		if generation_index < num_generations:
 			continue
-		logger.info(f"Generation {i + 1}/{number_of_generations}")
-		offspring = get_offspring(population, i + 1, parent_selection, rng)
+		logger.info(f"Generation {generation_index}/{number_of_generations}")
+		offspring = get_offspring(population, generation_index, parent_selection, rng)
 		population += run_generation(offspring, rng)
 		population = survivor_selection.select(population, rng)
 		writer.write_to_populations_file(population)

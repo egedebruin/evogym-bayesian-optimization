@@ -74,7 +74,7 @@ def learn(individual, rng):
 		controller = Controller(args)
 		sensors = Sensors(robot_body.grid)
 
-		result = world.run_simulator(sim, controller, sensors, viewer, config.SIMULATION_LENGTH, True)
+		result = world.run_simulator(sim, controller, sensors, viewer, config.SIMULATION_LENGTH, True, individual.original_generation)
 		if result > objective_value:
 			objective_value = result
 			best_brain = next_point

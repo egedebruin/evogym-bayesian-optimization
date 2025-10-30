@@ -50,7 +50,7 @@ def main():
 
     controller = Controller(args)
     sensors = Sensors(grid)
-    result = world.run_simulator(sim, controller, sensors, viewer, config.SIMULATION_LENGTH, False)
+    result = world.run_simulator(sim, controller, sensors, viewer, config.SIMULATION_LENGTH, False, int(best_individual[6]))
 
     print("DB best value: ", best_individual[5])
     print("Rerun value: ", result)
