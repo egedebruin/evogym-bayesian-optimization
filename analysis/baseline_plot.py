@@ -46,7 +46,7 @@ LINE_STYLES = {
 
 
 def make_the_plot(inherit, inherit_type, inherit_pool, environment, ax):
-    GENERATIONS = 50
+    GENERATIONS = 30
     key = (inherit, inherit_type, inherit_pool)
     label = LABELS.get(key)
     color = COLORS.get(key)
@@ -82,10 +82,10 @@ def make_the_plot(inherit, inherit_type, inherit_pool, environment, ax):
     ax.plot(x_vals, mean_vals, label=label, color=color, linestyle=LINE_STYLES.get(key))
     ax.fill_between(x_vals, q25, q75, color=color, alpha=0.2)
 
-    csv_data = {'cat': [LABELS[key] for _ in range(50)], 'x': range(50), 'y': np.mean(curves, axis=0),
-                'ymin': np.percentile(curves, 25, axis=0),
-                'ymax': np.percentile(curves, 25, axis=0)}
-    pd.DataFrame(csv_data).to_csv(f'performance-line-{environment}-{key[1]}-{key[2]}.txt', index=False, sep='\t')
+    # csv_data = {'cat': [LABELS[key] for _ in range(GENERATIONS)], 'x': range(GENERATIONS), 'y': np.mean(curves, axis=0),
+    #             'ymin': np.percentile(curves, 25, axis=0),
+    #             'ymax': np.percentile(curves, 25, axis=0)}
+    # pd.DataFrame(csv_data).to_csv(f'performance-line-{environment}-{key[1]}-{key[2]}.txt', index=False, sep='\t')
 
 
 def main():
@@ -103,7 +103,7 @@ def main():
         "lines.linewidth": 2.2
     })
 
-    environments = ['catch']
+    environments = ['bidirectional']
     strategy_keys = list(LABELS.keys())  # 6 total strategies
 
     fig, axes = plt.subplots(nrows=2, figsize=(10, 10), sharey=False)
