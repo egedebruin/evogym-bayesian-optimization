@@ -1,5 +1,12 @@
-import numpy as np
 import os
+
+# Force single-threaded execution
+os.environ["OMP_NUM_THREADS"] = "1"       # OpenMP
+os.environ["MKL_NUM_THREADS"] = "1"       # Intel MKL
+os.environ["OPENBLAS_NUM_THREADS"] = "1"  # OpenBLAS
+os.environ["NUMEXPR_NUM_THREADS"] = "1"   # NumExpr
+
+import numpy as np
 
 from robot.body import Body
 from robot.active import Brain

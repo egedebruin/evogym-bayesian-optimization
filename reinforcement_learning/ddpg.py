@@ -85,9 +85,11 @@ class DDPG(RL):
         rewards = torch.as_tensor(rewards, dtype=torch.float32)
         next_sensor_inputs = torch.as_tensor(next_states, dtype=torch.float32)
 
-        for i in range(5):
-            self.update_critic(policy_weights, sensor_inputs, raw_actions, rewards, next_sensor_inputs)
-        self.update_policy(policy_weights, sensor_inputs)
+        if self.do_update_critic:
+            for i in range(5):
+                self.update_critic(policy_weights, sensor_inputs, raw_actions, rewards, next_sensor_inputs)
+        if self.do_update_policy:
+            self.update_policy(policy_weights, sensor_inputs)
 
     def update_critic(self, policy_weights, sensor_inputs, raw_actions, rewards, next_sensor_inputs):
         """

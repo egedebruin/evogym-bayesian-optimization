@@ -78,29 +78,24 @@ def learn(individual, rng):
 	transition_buffer = deque(maxlen=2000)
 	for iteration in range(config.LEARN_ITERATIONS):
 		logger.info(f"Learn generation {iteration + 1}")
-		if iteration == 0 and config.INHERIT_SAMPLES == -1:
-			next_point = brain.to_next_point(actuator_indices)
-		elif iteration < config.INHERIT_SAMPLES and len(inherited_experience) > 0:
-			next_point = inherited_experience[iteration][0]
-		else:
-			next_point = optimizer.suggest()
+
+		next_point = get_next_point_from_inheritance(iteration, optimizer, brain, actuator_indices, inherited_experience)
 
 		if config.LEARN_METHOD == TYPE_BO:
-			args = brain.next_point_to_controller_values(next_point, actuator_indices)
+			controller_values = brain.next_point_to_controller_values(next_point, actuator_indices)
 			args = {k: torch.nn.Parameter(torch.tensor(v, dtype=torch.float32))
-				for k, v in args.items()}
-			args = Controller.get_parameters_from_args(args)
+				for k, v in controller_values.items()}
 		elif config.LEARN_METHOD == TYPE_DDPG:
+			rl_agent.set_update_boolean_values(iteration)
 			if iteration == 0:
-				print("Initial RL part")
-				args = brain.next_point_to_controller_values(next_point, actuator_indices)
+				controller_values = brain.next_point_to_controller_values(next_point, actuator_indices)
 				args = {k: torch.nn.Parameter(torch.tensor(v, dtype=torch.float32))
-						for k, v in args.items()}
-				args = Controller.get_parameters_from_args(args)
+						for k, v in controller_values.items()}
 				rl_agent.set_policy_optimizer(args, rl_agent.policy_lr)
 			else:
-				print("Secondary RL part")
 				args = previous_policy
+				controller_values = {k: v.detach().numpy() for k, v in args.items()}
+				next_point = brain.controller_values_to_next_point(controller_values)
 		else:
 			raise NotImplementedError
 
@@ -114,11 +109,21 @@ def learn(individual, rng):
 			objective_value = result
 			best_brain = next_point
 
-		alphas = np.append(alphas, config.LEARN_ALPHA)
-		optimizer.register(params=next_point, target=result)
-		optimizer.set_gp_params(alpha=alphas)
+		if config.LEARN_METHOD == TYPE_BO:
+			alphas = np.append(alphas, config.LEARN_ALPHA)
+			optimizer.register(params=next_point, target=result)
+			optimizer.set_gp_params(alpha=alphas)
+
 		experience.append((next_point, result))
 		previous_policy = controller.policy_weights
 	sim.reset()
 	viewer.close()
 	return objective_value, best_brain, experience, individual
+
+def get_next_point_from_inheritance(iteration, optimizer, brain, actuator_indices, inherited_experience):
+	if iteration == 0 and config.INHERIT_SAMPLES == -1:
+		return brain.to_next_point(actuator_indices)
+	elif iteration < config.INHERIT_SAMPLES and len(inherited_experience) > 0:
+		return inherited_experience[iteration][0]
+	else:
+		return optimizer.suggest()

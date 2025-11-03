@@ -26,6 +26,10 @@ class RL(ABC, nn.Module):
         self.velocity_indices = list(range(9, 27))
         self.velocity_norm = velocity_norm
 
+        self.do_update_policy = False
+        self.do_update_critic = False
+        self.do_update_norm = True
+
     def set_critic_parameters(self, args):
         # Critic weights
         self.critic_hidden_weights = RL.from_args(args, 'critic_hidden_weights')
@@ -47,6 +51,8 @@ class RL(ABC, nn.Module):
         return q_value.squeeze(-1)
 
     def update_norm(self, sensor_input, next_sensor_input):
+        if not self.do_update_norm:
+            return
         vel_indices = list(range(9, 27))
 
         # Convert list of arrays to single NumPy array first
@@ -77,6 +83,14 @@ class RL(ABC, nn.Module):
 
             processed_inputs.append(sensors)
         return processed_inputs
+
+    def set_update_boolean_values(self, iteration):
+        if iteration > 3:
+            self.do_update_critic = True
+            self.do_update_policy = True
+
+        if iteration > 5:
+            self.do_update_norm = True
 
     @staticmethod
     def create_global_critic_params(num_actuators):

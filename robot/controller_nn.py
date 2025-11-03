@@ -2,7 +2,6 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 
-from reinforcement_learning.rl import RL
 from robot.controller import Controller
 
 
@@ -54,12 +53,3 @@ class ControllerNN(Controller):
         next_sensor_input = sensors.get_input_from_sensors(sim)
         normalized_next_sensor_input = self.rl_agent.norm_sensor_input(next_sensor_input)
         self.rl_agent.post_action(self.policy_weights, sensor_input, normalized_sensor_input, next_sensor_input, normalized_next_sensor_input, reward, raw_action, buffer)
-
-    @staticmethod
-    def get_parameters_from_args(args):
-        return {
-            'hidden_weights': RL.from_args(args, 'hidden_weights'),
-            'hidden_biases': RL.from_args(args, 'hidden_biases'),
-            'output_weights': RL.from_args(args, 'output_weights'),
-            'output_biases': RL.from_args(args, 'output_biases')
-        }

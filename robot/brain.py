@@ -38,3 +38,8 @@ class Brain(ABC):
     @abstractmethod
     def next_point_to_controller_values(next_point, actuator_indices):
         pass
+
+    @staticmethod
+    @abstractmethod
+    def controller_values_to_next_point(controller_values):
+        pass

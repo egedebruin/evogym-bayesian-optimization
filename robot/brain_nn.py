@@ -38,12 +38,12 @@ class BrainNN(Brain):
         for i in range(BrainNN.NUMBER_OF_HIDDEN_NEURONS):
             next_point['hidden-bias_' + str(i)] = self.biases['hidden'][i]
             for j in range(BrainNN.NUMBER_OF_INPUT_NEURONS):
-                next_point['hidden_' + str(j) + '_' + str(i)] = self.weights['hidden'][i * j + i]
+                next_point['hidden_' + str(j) + '_' + str(i)] = self.weights['hidden'][i * BrainNN.NUMBER_OF_INPUT_NEURONS + j]
 
         for i in range(BrainNN.NUMBER_OF_OUTPUT_NEURONS):
             next_point['output-bias_' + str(i)] = self.biases['output'][i]
             for j in range(BrainNN.NUMBER_OF_HIDDEN_NEURONS):
-                next_point['output_' + str(j) + '_' + str(i)] = self.weights['output'][i * j + i]
+                next_point['output_' + str(j) + '_' + str(i)] = self.weights['output'][i * BrainNN.NUMBER_OF_HIDDEN_NEURONS + j]
         return next_point
 
     def to_string(self):
@@ -87,3 +87,23 @@ class BrainNN(Brain):
                 continue
 
         return args
+
+    @staticmethod
+    def controller_values_to_next_point(controller_values):
+        next_point = {}
+        for position, value in enumerate(controller_values['hidden_biases'][0]):
+            adjusted_value = (value + 0.1) / 0.2
+            next_point[f'hidden_bias_{position}'] = adjusted_value
+        for position, value in enumerate(controller_values['output_biases'][0]):
+            adjusted_value = (value + 1) / 2
+            next_point[f'output_bias_{position}'] = adjusted_value
+        for position_0, nested_list in enumerate(controller_values['hidden_weights']):
+            for position_1, value in enumerate(nested_list):
+                adjusted_value = (value + 1) / 2
+                next_point[f'hidden_{position_0}_{position_1}'] = adjusted_value
+        for position_0, nested_list in enumerate(controller_values['output_weights']):
+            for position_1, value in enumerate(nested_list):
+                adjusted_value = (value + 2) / 4
+                next_point[f'output_{position_0}_{position_1}'] = adjusted_value
+
+        return next_point
