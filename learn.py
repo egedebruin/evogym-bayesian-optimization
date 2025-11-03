@@ -115,11 +115,7 @@ def learn(individual, rng):
 			if iteration == 0 and config.INHERIT_SAMPLES == -1:
 				best_inherited_objective_value = result
 
-		if not config.RANDOM_LEARNING:
-			alphas = np.append(alphas, config.LEARN_ALPHA)
-			optimizer.register(params=next_point, target=result)
-			optimizer.set_gp_params(alpha=alphas)
-		if config.LEARN_METHOD == TYPE_BO:
+		if config.LEARN_METHOD == TYPE_BO and not config.RANDOM_LEARNING:
 			alphas = np.append(alphas, config.LEARN_ALPHA)
 			optimizer.register(params=next_point, target=result)
 			optimizer.set_gp_params(alpha=alphas)

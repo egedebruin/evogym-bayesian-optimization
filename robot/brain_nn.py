@@ -93,10 +93,10 @@ class BrainNN(Brain):
         next_point = {}
         for position, value in enumerate(controller_values['hidden_biases'][0]):
             adjusted_value = (value + 0.1) / 0.2
-            next_point[f'hidden_bias_{position}'] = adjusted_value
+            next_point[f'hidden-bias_{position}'] = adjusted_value
         for position, value in enumerate(controller_values['output_biases'][0]):
             adjusted_value = (value + 1) / 2
-            next_point[f'output_bias_{position}'] = adjusted_value
+            next_point[f'output-bias_{position}'] = adjusted_value
         for position_0, nested_list in enumerate(controller_values['hidden_weights']):
             for position_1, value in enumerate(nested_list):
                 adjusted_value = (value + 1) / 2
