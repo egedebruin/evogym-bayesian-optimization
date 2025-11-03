@@ -59,11 +59,12 @@ def make_the_plot(inherit, inherit_type, inherit_pool, environment, ax):
         data_path = f'results/learn-{EVALS_PER_GEN}_inherit-{inherit}_type-{inherit_type}_pool-{inherit_pool}_environment-{environment}_repetition-{repetition}'
         data_array = plot.get_data(data_path, GENERATIONS)
 
-        if data_array is None or len(data_array) < GENERATIONS:
+        if data_array is None:
+            continue
+        if len(data_array) < GENERATIONS:
             print(f'No data found for {environment}, {inherit}, {inherit_type}, {inherit_pool}, {repetition}')
             print(len(data_array)) if data_array is not None else print("None")
             print()
-            continue
 
         max_vals = np.max(data_array, axis=1)
         running_max = np.maximum.accumulate(max_vals)
