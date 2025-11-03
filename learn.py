@@ -4,11 +4,12 @@ from collections import deque
 
 import numpy as np
 import torch
-from bayes_opt import BayesianOptimization, acquisition
-
+from bayes_opt import acquisition
 from sklearn.gaussian_process.kernels import Matern
 
 from reinforcement_learning.ddpg import DDPG
+from custom_bayesian_optimization import CustomBayesianOptimization
+
 from robot.active import Controller
 from configs import config
 from robot.running_norm import RunningNorm
@@ -52,7 +53,7 @@ def learn(individual, rng):
 		velocity_norm = RunningNorm()
 		rl_agent = DDPG(args, velocity_norm)
 
-	optimizer = BayesianOptimization(
+	optimizer = CustomBayesianOptimization(
 		f=None,
 		pbounds=brain.get_p_bounds(actuator_indices),
 		allow_duplicate_points=True,
@@ -74,6 +75,7 @@ def learn(individual, rng):
 	objective_value = -math.inf
 	best_brain = None
 	previous_policy = None
+	best_inherited_objective_value = -math.inf
 	experience = []
 	transition_buffer = deque(maxlen=2000)
 	for iteration in range(config.LEARN_ITERATIONS):
@@ -104,21 +106,28 @@ def learn(individual, rng):
 
 		sensors = Sensors(robot_body.grid)
 
-		result = world.run_simulator(sim, controller, sensors, viewer, config.SIMULATION_LENGTH, True, transition_buffer)
+		result = world.run_simulator(sim, controller, sensors, viewer, config.SIMULATION_LENGTH, True, individual.original_generation, transition_buffer)
 		if result > objective_value:
 			objective_value = result
 			best_brain = next_point
+			if iteration < config.INHERIT_SAMPLES and len(inherited_experience) > 0:
+				best_inherited_objective_value = result
+			if iteration == 0 and config.INHERIT_SAMPLES == -1:
+				best_inherited_objective_value = result
 
+		if not config.RANDOM_LEARNING:
+			alphas = np.append(alphas, config.LEARN_ALPHA)
+			optimizer.register(params=next_point, target=result)
+			optimizer.set_gp_params(alpha=alphas)
 		if config.LEARN_METHOD == TYPE_BO:
 			alphas = np.append(alphas, config.LEARN_ALPHA)
 			optimizer.register(params=next_point, target=result)
 			optimizer.set_gp_params(alpha=alphas)
-
 		experience.append((next_point, result))
 		previous_policy = controller.policy_weights
 	sim.reset()
 	viewer.close()
-	return objective_value, best_brain, experience, individual
+	return objective_value, best_brain, experience, best_inherited_objective_value, individual
 
 def get_next_point_from_inheritance(iteration, optimizer, brain, actuator_indices, inherited_experience):
 	if iteration == 0 and config.INHERIT_SAMPLES == -1:

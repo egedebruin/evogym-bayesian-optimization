@@ -1,77 +1,118 @@
 import ast
 import concurrent.futures
 import math
+import os
+import sys
 
 import numpy as np
-from bayes_opt import BayesianOptimization, acquisition
+from bayes_opt import acquisition
 from sklearn.gaussian_process.kernels import Matern
 import pandas as pd
 
+parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+sys.path.insert(0, parent_dir)
+
+from custom_bayesian_optimization import CustomBayesianOptimization
 from configs import config
 from robot.active import Brain
 from robot.active import Controller
 from robot.sensors import Sensors
+from robot.brain_nn import BrainNN
 from util import start, world
 
+LABELS = {
+    (-1, 'none', 0): 'Individual learning',
+    (8, 'parent', 1): 'Social learning - Parent',
+    (8, 'best', 1): 'Social learning - Best - N=1',
+    (8, 'best', 8): 'Social learning - Best - N=8',
+    (8, 'random', 1): 'Social learning - Random - N=1',
+    (8, 'random', 8): 'Social learning - Random - N=8',
+    (8, 'similar', 1): 'Social learning - Similar - N=1',
+    (8, 'similar', 8): 'Social learning - Similar - N=8',
+}
+
+SUB_FOLDER = 'baseline'
+EVALS_PER_GEN = 50
+ENVIRONMENT = 'carry'
+REPS = 3
+
 def main():
-    rng = start.make_rng_seed()
+    config.ENVIRONMENT = ENVIRONMENT
+
+    if config.ENVIRONMENT == 'carry' or config.ENVIRONMENT == 'catch':
+        BrainNN.NUMBER_OF_INPUT_NEURONS = BrainNN.NUMBER_OF_INPUT_NEURONS + 2
+
     result_dict = {
-        'n_learn': [],
+        'original_environment': [],
         'inherit': [],
+        'type': [],
+        'pool': [],
         'repetition': [],
+        'experiment_repetition': [],
+        'learn_iteration': [],
         'objective_value': []
     }
 
-    for n_learn, inherit in [(1, -1), (30, -1), (30, 0), (30, 5)]:
-        result = parallelize(n_learn, inherit, 500, rng)
-        for repetition in range(len(result)):
-            result_dict['n_learn'].append(n_learn)
-            result_dict['inherit'].append(inherit)
-            result_dict['repetition'].append(repetition + 1)
-            result_dict['objective_value'].append(result[repetition])
+    strategy_keys = list(LABELS.keys())
 
-    pd.DataFrame(result_dict).to_csv('../results/best_morphologies_results.csv', index=False)
+    for r in range(REPS):
+        for key in strategy_keys:
+            result = parallelize(key[0], key[1], key[2], 500)
+            for repetition in range(len(result)):
+                for learn_iteration in range(len(result[repetition][0])):
+                    result_dict['original_environment'].append(result[repetition][1])
+                    result_dict['inherit'].append(key[0])
+                    result_dict['type'].append(key[1])
+                    result_dict['pool'].append(key[2])
+                    result_dict['repetition'].append(r + 1)
+                    result_dict['experiment_repetition'].append(repetition + 1)
+                    result_dict['learn_iteration'].append(learn_iteration + 1)
+                    result_dict['objective_value'].append(result[repetition][0][learn_iteration])
 
-def parallelize(n_learn, inherit, learn_iterations, rng):
+    pd.DataFrame(result_dict).to_csv(f'results/{ENVIRONMENT}.csv', index=False)
+
+def parallelize(inherit, i_type, pool, learn_iterations):
     grids = []
-    for repetition in range(1, 21):
-        print(f"Repetition {repetition}")
-        folder = f'results/new/learn-{n_learn}_inherit-{inherit}_repetition-{repetition}'
-        best_fitness = float('-inf')
-        best_grid = None
+    for environment in ['simple', 'steps', 'carry', 'catch']:
+        for repetition in range(1, 21):
+            folder = f'results/learn-{EVALS_PER_GEN}_inherit-{inherit}_type-{i_type}_pool-{pool}_environment-{environment}_repetition-{repetition}/'
+            best_fitness = float('-inf')
+            best_grid = None
 
-        with open(folder + "/individuals.txt", "r") as file:
-            for line in file:
-                parts = line.strip().split(";")
-                try:
-                    fitness = float(parts[5])
-                    if fitness > best_fitness:
-                        best_fitness = fitness
-                        best_grid = np.array(ast.literal_eval(parts[1]))
-                except (ValueError, IndexError, SyntaxError):
-                    continue  # skip malformed lines
+            with open(folder + "/individuals.txt", "r") as file:
+                for line in file:
+                    parts = line.strip().split(";")
+                    try:
+                        fitness = float(parts[5])
+                        if fitness > best_fitness:
+                            best_fitness = fitness
+                            best_grid = np.array(ast.literal_eval(parts[1]))
+                    except (ValueError, IndexError, SyntaxError):
+                        continue  # skip malformed lines
 
-        if best_grid is not None:
-            grids.append(best_grid)
+            if best_grid is not None:
+                grids.append((best_grid, environment))
 
     with concurrent.futures.ProcessPoolExecutor(
-            max_workers=20
+            max_workers=80
     ) as executor:
         futures = []
-        for grid in grids:
-            futures.append(executor.submit(learn, grid, learn_iterations, rng))
+        for grid, environment in grids:
+            futures.append(executor.submit(learn, grid, learn_iterations, environment))
 
     result = []
     for future in futures:
         result.append(future.result())
     return result
 
-def learn(grid, learn_iterations, rng):
+def learn(grid, learn_iterations, original_environment):
+    rng = start.make_rng_seed()
+
     brain = Brain(config.GRID_LENGTH, rng)
 
-    sim, viewer = world.build_world(grid)
+    sim, viewer = world.build_world(grid, rng)
     actuator_indices = sim.get_actuator_indices('robot')
-    optimizer = BayesianOptimization(
+    optimizer = CustomBayesianOptimization(
         f=None,
         pbounds=brain.get_p_bounds(actuator_indices),
         allow_duplicate_points=True,
@@ -85,6 +126,7 @@ def learn(grid, learn_iterations, rng):
     optimizer.set_gp_params(alpha=config.LEARN_ALPHA)
 
     objective_value = -math.inf
+    objective_values = []
     for bayesian_optimization_iteration in range(learn_iterations):
         print(f"Learn generation {bayesian_optimization_iteration + 1}")
         if bayesian_optimization_iteration == 0:
@@ -97,6 +139,7 @@ def learn(grid, learn_iterations, rng):
         sensors = Sensors(grid)
 
         result = world.run_simulator(sim, controller, sensors, viewer, config.SIMULATION_LENGTH, True)
+        objective_values.append(result)
 
         if result > objective_value:
             objective_value = result
@@ -104,7 +147,7 @@ def learn(grid, learn_iterations, rng):
         optimizer.register(params=next_point, target=result)
     sim.reset()
     viewer.close()
-    return objective_value
+    return objective_values, original_environment
 
 if __name__ == '__main__':
     main()

@@ -17,6 +17,8 @@ def read_args():
 	parser.add_argument('--social-pool', help='Pool of robots to inherit', required=True, type=int)
 	parser.add_argument('--inherit-alpha', help='Alpha for inherited parameters', required=False, type=float)
 	parser.add_argument('--kappa', help='Kappa for UCB', required=False, type=float)
+	parser.add_argument('--random-learn', help='Learn only with random controllers', required=False, type=int)
+	parser.add_argument('--bo-restarts', help='Number of restarts for the BO sample finder', required=False, type=int)
 
 	args = parser.parse_args()
 	config.LEARN_ITERATIONS = args.learn
@@ -32,6 +34,13 @@ def read_args():
 	if args.kappa:
 		config.LEARN_KAPPA = args.kappa
 		extra += "_kappa-" + str(args.kappa)
+	if args.random_learn:
+		config.RANDOM_LEARNING = args.random_learn == 1
+		extra += "_random-" + str(args.random_learn)
+	if args.bo_restarts:
+		config.BO_RESTARTS = args.bo_restarts
+	else:
+		config.BO_RESTARTS = 1
 	config.FOLDER = f"results/learn-{args.learn}_inherit-{args.inherit_samples}_type-{args.inherit_type}_pool-{args.social_pool}_environment-{args.environment}{extra}_repetition-{args.repetition}/"
 
 def make_rng_seed():

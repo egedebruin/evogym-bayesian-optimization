@@ -28,12 +28,12 @@ def build_world(robot_structure, rng):
 
     return sim, viewer
 
-def run_simulator(sim, controller, sensors, viewer, simulator_length, headless, transition_buffer):
+
+def run_simulator(sim, controller, sensors, viewer, simulator_length, headless, generation_index=0, transition_buffer=None):
     sim.reset()
     extra_metrics = []
     start_position = sim.object_pos_at_time(sim.get_time(), 'robot')
     extra_metrics = extra_metrics_for_objective_value('before', sim, extra_metrics)
-
     previous_position = None
     sensor_input = None
     normalized_sensor_input = None
@@ -112,17 +112,19 @@ def run_simulator(sim, controller, sensors, viewer, simulator_length, headless, 
 
     end_position = sim.object_pos_at_time(sim.get_time(), 'robot')
     extra_metrics = extra_metrics_for_objective_value('after', sim, extra_metrics)
-    return calculate_objective_value(start_position, end_position, extra_metrics)
+    return calculate_objective_value(start_position, end_position, extra_metrics, generation_index)
 
 
 # Below are Environment specific things
 def start_position_robot():
     if config.ENVIRONMENT == 'catch':
         return 16, 1
+    if config.ENVIRONMENT == 'bidirectional':
+        return 100, 1
     return 1, 1
 
 def get_environment():
-    if config.ENVIRONMENT == 'simple' or config.ENVIRONMENT == 'jump' or config.ENVIRONMENT == 'catch':
+    if config.ENVIRONMENT == 'simple' or config.ENVIRONMENT == 'jump' or config.ENVIRONMENT == 'catch' or config.ENVIRONMENT == 'bidirectional':
         env = 'simple_environment.json'
     elif config.ENVIRONMENT == 'climb':
         env = 'climb_environment.json'
@@ -135,6 +137,7 @@ def get_environment():
     else:
         raise ValueError(f"Environment {config.ENVIRONMENT} does not exist.")
     return env
+
 
 def tracker(viewer):
     if config.ENVIRONMENT == 'carry' or config.ENVIRONMENT == 'catch':
@@ -164,9 +167,13 @@ def add_extra_attributes(world, rng):
 
     return world
 
-def calculate_objective_value(start_position, end_position, extra_metrics):
+def calculate_objective_value(start_position, end_position, extra_metrics, generation_index):
     if config.ENVIRONMENT == 'simple' or config.ENVIRONMENT == 'rugged' or config.ENVIRONMENT == 'steps':
         return np.mean(end_position[0]) - np.mean(start_position[0])
+    elif config.ENVIRONMENT == 'bidirectional':
+        if generation_index % 2 == 0:
+            return np.mean(end_position[0]) - np.mean(start_position[0])
+        return np.mean(start_position[0]) - np.mean(end_position[0])
     elif config.ENVIRONMENT == 'climb':
         return np.mean(end_position[1]) - np.mean(start_position[1])
     elif config.ENVIRONMENT == 'jump':
