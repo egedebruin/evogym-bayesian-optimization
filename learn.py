@@ -7,17 +7,18 @@ import torch
 from bayes_opt import acquisition
 from sklearn.gaussian_process.kernels import Matern
 
-from reinforcement_learning.ddpg import DDPG
 from custom_bayesian_optimization import CustomBayesianOptimization
+from reinforcement_learning.ddpg import DDPG
+from reinforcement_learning.ppo import PPO
 
 from robot.active import Controller
 from configs import config
-from robot.running_norm import RunningNorm
 from robot.sensors import Sensors
 from util import world
 from util.logger_setup import logger
 
 TYPE_DDPG = 'ddpg'
+TYPE_PPO = 'ppo'
 TYPE_BO = 'bo'
 
 
@@ -47,11 +48,9 @@ def learn(individual, rng):
 
 	rl_agent = None
 	if config.LEARN_METHOD == TYPE_DDPG:
-		args = DDPG.create_global_critic_params(len(actuator_indices))
-		args = {k: torch.nn.Parameter(torch.tensor(v, dtype=torch.float32))
-				for k, v in args.items()}
-		velocity_norm = RunningNorm()
-		rl_agent = DDPG(args, velocity_norm)
+		rl_agent = DDPG(len(actuator_indices))
+	elif config.LEARN_METHOD == TYPE_PPO:
+		rl_agent = PPO(len(actuator_indices))
 
 	optimizer = CustomBayesianOptimization(
 		f=None,
@@ -87,7 +86,7 @@ def learn(individual, rng):
 			controller_values = brain.next_point_to_controller_values(next_point, actuator_indices)
 			args = {k: torch.nn.Parameter(torch.tensor(v, dtype=torch.float32))
 				for k, v in controller_values.items()}
-		elif config.LEARN_METHOD == TYPE_DDPG:
+		elif config.LEARN_METHOD == TYPE_DDPG or config.LEARN_METHOD == TYPE_PPO:
 			rl_agent.set_update_boolean_values(iteration)
 			if iteration == 0:
 				controller_values = brain.next_point_to_controller_values(next_point, actuator_indices)

@@ -12,6 +12,9 @@ class Controller(ABC):
     def post_action(self, sim, sensor_input, normalized_sensor_input, raw_action, previous_position, sensors, buffer):
         return
 
+    def post_rollout(self, last_sensor_input):
+        return
+
     @staticmethod
     def get_parameters_from_args(args):
         return args

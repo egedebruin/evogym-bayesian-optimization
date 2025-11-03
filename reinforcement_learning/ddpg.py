@@ -9,10 +9,13 @@ from reinforcement_learning.rl import RL
 
 class DDPG(RL):
 
-    def __init__(self, args, velocity_norm):
-        super().__init__(velocity_norm)
-        self.policy_optimizer = None
-        self.critic_optimizer = None
+    def __init__(self, num_actuators):
+        self.gamma = 0.95
+        self.policy_lr = 1e-4
+        self.critic_lr = 1e-4
+        self.tau = 0.01
+
+        super().__init__(num_actuators)
 
         self.target_critic_hidden_weights = None
         self.target_critic_hidden_biases = None
@@ -21,16 +24,10 @@ class DDPG(RL):
         self.target_critic_output_weights = None
         self.target_critic_output_biases = None
 
-        self.set_critic_parameters(args)
-        self.gamma = 0.95
-        self.policy_lr = 1e-4
-        self.critic_lr = 1e-4
-        self.tau = 0.01
-        self.set_critic_optimizer(self.critic_lr)
+        self.set_target_critic_parameters()
 
-    def set_critic_parameters(self, args):
-        super().set_critic_parameters(args)
 
+    def set_target_critic_parameters(self):
         self.target_critic_hidden_weights = nn.Parameter(self.critic_hidden_weights.clone().detach(),
                                                          requires_grad=False)
         self.target_critic_hidden_biases = nn.Parameter(self.critic_hidden_biases.clone().detach(),
@@ -44,16 +41,6 @@ class DDPG(RL):
         self.target_critic_output_biases = nn.Parameter(self.critic_output_biases.clone().detach(),
                                                         requires_grad=False)
 
-    def set_critic_optimizer(self, critic_lr):
-        critic_params = [self.critic_hidden_weights, self.critic_hidden_biases,
-                         self.critic_hidden2_weights, self.critic_hidden2_biases,
-                         self.critic_output_weights, self.critic_output_biases]
-
-        self.critic_optimizer = torch.optim.Adam(critic_params, lr=critic_lr)
-
-    def set_policy_optimizer(self, policy_weights, policy_lr):
-        self.policy_optimizer = torch.optim.Adam(list(policy_weights.values()), lr=policy_lr)
-
     def forward_target_critic(self, critic_input):
         h1 = F.relu(critic_input @ self.target_critic_hidden_weights + self.target_critic_hidden_biases)
         h2 = F.relu(h1 @ self.target_critic_hidden2_weights + self.target_critic_hidden2_biases)
@@ -65,6 +52,22 @@ class DDPG(RL):
         self.update_norm(sensor_input, next_sensor_input)
 
         self.update(policy_weights, buffer)
+
+    def control(self, sensor_input, policy_weights):
+        """
+        sensor_inputs: list of length M, each element = list/array of input_dim features
+        """
+        with torch.no_grad():
+            sensor_tensor = torch.tensor(np.array(sensor_input), dtype=torch.float32)
+
+            hidden = F.relu(sensor_tensor @ policy_weights['hidden_weights'] + policy_weights['hidden_biases'])
+            raw_output = hidden @ policy_weights['output_weights'] + policy_weights['output_biases']
+            raw_action = torch.sigmoid(raw_output).cpu().numpy()
+
+        return raw_action
+
+    def get_input_size(self, num_actuators, policy_input, policy_output):
+        return num_actuators * (policy_input + policy_output)
 
     def update(self, policy_weights, buffer):
         # Make sure buffer has enough samples
@@ -163,16 +166,3 @@ class DDPG(RL):
         ], max_norm=1.0)
         self.policy_optimizer.step()
         self.clip_policy_params(policy_weights)
-
-    def clip_policy_params(self, policy_weights):
-        # Hidden weights: [-1, 1]
-        policy_weights['hidden_weights'].data.clamp_(-1.0, 1.0)
-
-        # Hidden biases: [-0.1, 0.1]
-        policy_weights['hidden_biases'].data.clamp_(-0.1, 0.1)
-
-        # Output weights: [-2, 2]
-        policy_weights['output_weights'].data.clamp_(-2.0, 2.0)
-
-        # Output biases: [-1, 1]
-        policy_weights['output_biases'].data.clamp_(-1.0, 1.0)

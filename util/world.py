@@ -39,13 +39,6 @@ def run_simulator(sim, controller, sensors, viewer, simulator_length, headless, 
     normalized_sensor_input = None
     raw_action = None
 
-    # if rl_type == 'PPO':
-    #     observations = []
-    #     actions = []
-    #     log_probs = []
-    #     rewards = []
-    #     values = []
-
     for simulation_step in range(simulator_length):
 
         # ----- During phase metrics -----
@@ -57,25 +50,16 @@ def run_simulator(sim, controller, sensors, viewer, simulator_length, headless, 
             sensor_input = sensors.get_input_from_sensors(sim)
             normalized_sensor_input = controller.adjust_sensor_input(sensor_input)
 
-            raw_action, extra_args = controller.control(normalized_sensor_input)
+            raw_action = controller.control(normalized_sensor_input)
             adjusted_action = raw_action + 0.6
 
             sim.set_action('robot', adjusted_action)
 
             previous_position = sim.object_pos_at_time(sim.get_time(), 'robot')
 
-            # if rl_type == 'PPO':
-            #     observations.append(extra_args['obs'])
-            #     actions.append(raw_action)
-            #     log_probs.append(extra_args['log_prob'])
-            #     values.append(extra_args['value'])
-
         # ----- Learning step -----
         if simulation_step % 5 == 4:
             controller.post_action(sim, sensor_input, normalized_sensor_input, raw_action, previous_position, sensors, transition_buffer)
-
-            # if rl_type == 'PPO':
-            #     rewards.append(reward)
 
         # Step simulation
         sim.step()
@@ -84,31 +68,7 @@ def run_simulator(sim, controller, sensors, viewer, simulator_length, headless, 
         if not headless:
             viewer.render('screen')
 
-    # if rl_type == 'PPO' and update_policy:
-    #     # 1) Stack into numpy first (preserve per-timestep structure)
-    #     obs_np = np.stack(observations)  # [T, M, input_dim]
-    #     acts_np = np.stack(actions)  # [T, M, action_dim] (if scalar actions -> [T, M, 1])
-    #     logp_np = np.stack(log_probs)  # [T, M]
-    #     vals_np = np.stack(values)  # [T] or [T, 1] depending on what you stored
-    #
-    #     # 2) Convert to torch tensors on the correct device
-    #     device = controller.hidden_weights.device
-    #     obs_tensor = torch.tensor(obs_np, dtype=torch.float32, device=device)  # [T, M, input_dim]
-    #     act_tensor = torch.tensor(acts_np, dtype=torch.float32, device=device)  # [T, M, action_dim]
-    #     logp_tensor = torch.tensor(logp_np, dtype=torch.float32, device=device)  # [T, M]
-    #     rew_tensor = torch.tensor(np.array(rewards, dtype=np.float32), dtype=torch.float32, device=device)  # [T]
-    #     val_tensor = torch.tensor(vals_np, dtype=torch.float32, device=device).squeeze(-1)  # [T]
-    #     logp_per_timestep = logp_tensor.sum(dim=1)  # [T]
-    #
-    #     for i in range(5):
-    #         controller.ppo_update(
-    #             obs=obs_tensor,
-    #             actions=act_tensor,
-    #             log_probs_old=logp_per_timestep,
-    #             rewards=rew_tensor,
-    #             values=val_tensor,
-    #             last_sensor_input=sensor_input
-    #         )
+    controller.post_rollout(sensor_input)
 
     end_position = sim.object_pos_at_time(sim.get_time(), 'robot')
     extra_metrics = extra_metrics_for_objective_value('after', sim, extra_metrics)

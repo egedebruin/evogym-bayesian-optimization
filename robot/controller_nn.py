@@ -29,6 +29,8 @@ class ControllerNN(Controller):
         """
         sensor_inputs: list of length M, each element = list/array of input_dim features
         """
+        if self.rl_agent is not None:
+            return self.rl_agent.control(sensor_input, self.policy_weights)
         with torch.no_grad():
             sensor_tensor = torch.tensor(np.array(sensor_input), dtype=torch.float32)
 
@@ -36,7 +38,7 @@ class ControllerNN(Controller):
             raw_output = hidden @ self.output_weights + self.output_biases
             raw_action = torch.sigmoid(raw_output).cpu().numpy()
 
-        return raw_action, {}
+        return raw_action
 
     def adjust_sensor_input(self, sensor_input):
         if self.rl_agent is None:
@@ -53,3 +55,8 @@ class ControllerNN(Controller):
         next_sensor_input = sensors.get_input_from_sensors(sim)
         normalized_next_sensor_input = self.rl_agent.norm_sensor_input(next_sensor_input)
         self.rl_agent.post_action(self.policy_weights, sensor_input, normalized_sensor_input, next_sensor_input, normalized_next_sensor_input, reward, raw_action, buffer)
+
+    def post_rollout(self, last_sensor_input):
+        if self.rl_agent is None:
+            return
+        self.rl_agent.post_rollout(last_sensor_input, self.policy_weights)

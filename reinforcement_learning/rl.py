@@ -6,6 +6,9 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+from robot.running_norm import RunningNorm
+
+
 class RL(ABC, nn.Module):
 
     @staticmethod
@@ -14,8 +17,9 @@ class RL(ABC, nn.Module):
             raise KeyError(f"Missing parameter '{name}' in args")
         return nn.Parameter(args[name].detach().clone())
 
-    def __init__(self, velocity_norm):
+    def __init__(self, num_actuators):
         super().__init__()
+
         self.critic_hidden_weights = None
         self.critic_hidden_biases = None
         self.critic_hidden2_weights = None
@@ -24,11 +28,30 @@ class RL(ABC, nn.Module):
         self.critic_output_biases = None
 
         self.velocity_indices = list(range(9, 27))
-        self.velocity_norm = velocity_norm
+        self.velocity_norm = RunningNorm()
 
         self.do_update_policy = False
         self.do_update_critic = False
         self.do_update_norm = True
+
+        args = self.create_global_critic_params(num_actuators)
+        args = {k: torch.nn.Parameter(torch.tensor(v, dtype=torch.float32))
+                for k, v in args.items()}
+        self.policy_optimizer = None
+        self.critic_optimizer = None
+        self.set_critic_parameters(args)
+        self.set_critic_optimizer(self.critic_lr)
+
+
+    def set_critic_optimizer(self, critic_lr):
+        critic_params = [self.critic_hidden_weights, self.critic_hidden_biases,
+                         self.critic_hidden2_weights, self.critic_hidden2_biases,
+                         self.critic_output_weights, self.critic_output_biases]
+
+        self.critic_optimizer = torch.optim.Adam(critic_params, lr=critic_lr)
+
+    def set_policy_optimizer(self, policy_weights, policy_lr):
+        self.policy_optimizer = torch.optim.Adam(list(policy_weights.values()), lr=policy_lr)
 
     def set_critic_parameters(self, args):
         # Critic weights
@@ -43,6 +66,17 @@ class RL(ABC, nn.Module):
     @abstractmethod
     def post_action(self, policy_weights, sensor_input, normalized_sensor_input, next_sensor_input, normalized_next_sensor_input, reward, raw_action, buffer):
         pass
+
+    @abstractmethod
+    def control(self, sensor_input, policy_weights):
+        pass
+
+    @abstractmethod
+    def get_input_size(self, num_actuators, policy_input, policy_output):
+        pass
+
+    def post_rollout(self, last_sensor_input, policy_weights):
+        return
 
     def forward_critic(self, critic_input):
         h1 = F.relu(critic_input @ self.critic_hidden_weights + self.critic_hidden_biases)
@@ -92,8 +126,7 @@ class RL(ABC, nn.Module):
         if iteration > 5:
             self.do_update_norm = True
 
-    @staticmethod
-    def create_global_critic_params(num_actuators):
+    def create_global_critic_params(self, num_actuators):
         input_dim = 29
         hidden_dim1 = 128  # first hidden layer
         hidden_dim2 = 64  # second hidden layer
@@ -103,11 +136,9 @@ class RL(ABC, nn.Module):
             return [[random.uniform(low, high) for _ in range(shape[1])] for _ in range(shape[0])] \
                 if len(shape) == 2 else [random.uniform(low, high) for _ in range(shape[0])]
 
-        input_size = num_actuators * (input_dim + output_dim)
-
         params = {
             # first layer
-            'critic_hidden_weights': rand_list((input_size, hidden_dim1), -0.1, 0.1),
+            'critic_hidden_weights': rand_list((self.get_input_size(num_actuators, input_dim, output_dim), hidden_dim1), -0.1, 0.1),
             'critic_hidden_biases': rand_list((hidden_dim1,), -0.01, 0.01),
 
             # second layer
@@ -120,3 +151,16 @@ class RL(ABC, nn.Module):
         }
 
         return params
+
+    def clip_policy_params(self, policy_weights):
+        # Hidden weights: [-1, 1]
+        policy_weights['hidden_weights'].data.clamp_(-1.0, 1.0)
+
+        # Hidden biases: [-0.1, 0.1]
+        policy_weights['hidden_biases'].data.clamp_(-0.1, 0.1)
+
+        # Output weights: [-2, 2]
+        policy_weights['output_weights'].data.clamp_(-2.0, 2.0)
+
+        # Output biases: [-1, 1]
+        policy_weights['output_biases'].data.clamp_(-1.0, 1.0)
