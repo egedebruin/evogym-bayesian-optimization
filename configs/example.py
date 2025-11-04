@@ -6,7 +6,6 @@ INHERIT_SAMPLES = 2 # from -1 to LEARN_ITERATIONS
 ENVIRONMENT = 'simple'
 INHERIT_TYPE = 'best' # parent, random, none, similar or best
 SOCIAL_POOL = 8
-
 LEARN_METHOD = 'bo'
 
 RANDOM_LEARNING = False

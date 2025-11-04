@@ -15,6 +15,7 @@ def read_args():
 	parser.add_argument('--environment', help='Environment', required=True, type=str)
 	parser.add_argument('--inherit-type', help='Inheritance type', required=True, type=str)
 	parser.add_argument('--social-pool', help='Pool of robots to inherit', required=True, type=int)
+	parser.add_argument('--learn-method', help='Controller learn method', required=True, type=str)
 	parser.add_argument('--inherit-alpha', help='Alpha for inherited parameters', required=False, type=float)
 	parser.add_argument('--kappa', help='Kappa for UCB', required=False, type=float)
 	parser.add_argument('--random-learn', help='Learn only with random controllers', required=False, type=int)
@@ -26,6 +27,7 @@ def read_args():
 	config.ENVIRONMENT = args.environment
 	config.INHERIT_TYPE = args.inherit_type
 	config.SOCIAL_POOL = args.social_pool
+	config.LEARN_METHOD = args.learn_method
 
 	extra = ''
 	if args.inherit_alpha:
