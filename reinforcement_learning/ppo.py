@@ -37,9 +37,9 @@ class PPO(RL):
     def get_action_and_value(self, obs, policy_weights):
         mu, std = self.forward_policy(obs, policy_weights)
         dist = torch.distributions.Normal(mu, std)
-        action = dist.sample()
-        action = action.clamp(0.0, 1.0)
-        log_prob = dist.log_prob(action).sum(-1)
+        raw_action = dist.rsample()
+        action = torch.sigmoid(raw_action)
+        log_prob = dist.log_prob(raw_action).sum(-1) - torch.log(action * (1 - action) + 1e-6).sum(-1)
         flat_obs = obs.reshape(obs.shape[0], -1)
         value = self.forward_critic(flat_obs)
         return action, log_prob, value
@@ -47,7 +47,8 @@ class PPO(RL):
     def evaluate_actions(self, obs, actions, policy_weights):
         mu, std = self.forward_policy(obs, policy_weights)
         dist = torch.distributions.Normal(mu, std)
-        log_probs = dist.log_prob(actions).sum(-1)
+        raw_actions = torch.log(actions.clamp(1e-6, 1 - 1e-6) / (1 - actions.clamp(1e-6, 1 - 1e-6)))
+        log_probs = dist.log_prob(raw_actions).sum(-1) - torch.log(actions * (1 - actions) + 1e-6).sum(-1)
         entropy = dist.entropy().sum(-1)
         flat_obs = obs.reshape(obs.shape[0], -1)
         values = self.forward_critic(flat_obs)
@@ -57,14 +58,14 @@ class PPO(RL):
         advantages = torch.zeros_like(rewards)
         last_adv = 0
         for t in reversed(range(len(rewards))):
-            delta = rewards[t] + self.gamma * next_values[t] - values[t]
+            delta = rewards[t] + self.gamma * next_values[t].detach() - values[t].detach()
             advantages[t] = last_adv = delta + self.gamma * self.lam * last_adv
         returns = advantages + values
         return advantages, returns
 
     def set_policy_optimizer(self, policy_weights, policy_lr):
         self.log_std = nn.Parameter(torch.ones_like(policy_weights['output_biases']) * -2)
-        super().set_policy_optimizer(policy_weights, policy_lr)
+        super().set_policy_optimizer(list(policy_weights.values()) + [self.log_std], policy_lr)
 
     def post_action(self, policy_weights, sensor_input, normalized_sensor_input, next_sensor_input,
                     normalized_next_sensor_input, reward, raw_action, buffer):
@@ -162,23 +163,38 @@ class PPO(RL):
         policy_loss = -torch.min(surr1, surr2).mean()
 
         # --- Value loss ---
-        value_loss = F.mse_loss(values_pred.squeeze(-1), returns)
+        value_loss = F.mse_loss(values_pred.squeeze(-1), returns.detach())
 
         # --- Total loss ---
-        loss = policy_loss + self.value_coef * value_loss - self.entropy_coef * entropy.mean()
+        loss = 0
+        if self.do_update_policy:
+            loss = loss + policy_loss - self.entropy_coef * entropy.mean()
+        if self.do_update_critic:
+            loss = loss + self.value_coef * value_loss
 
         # --- Total loss already computed as `loss` ---
-        self.critic_optimizer.zero_grad()
-        self.policy_optimizer.zero_grad()
-        loss.backward()
+        if self.do_update_policy:
+            self.policy_optimizer.zero_grad()
+        if self.do_update_critic:
+            self.critic_optimizer.zero_grad()
 
-        torch.nn.utils.clip_grad_norm_(self.parameters(), self.max_grad_norm)
-        self.critic_optimizer.step()
-        self.policy_optimizer.step()
+        # Backprop
+        if self.do_update_policy or self.do_update_critic:
+            loss.backward()
+
+        # Apply only the requested updates
+        torch.nn.utils.clip_grad_norm_([
+            policy_weights['hidden_weights'], policy_weights['hidden_biases'],
+            policy_weights['output_weights'], policy_weights['output_biases']
+        ], self.max_grad_norm)
+        if self.do_update_critic:
+            self.critic_optimizer.step()
+        if self.do_update_policy:
+            self.policy_optimizer.step()
+
         self.clip_policy_params(policy_weights)
 
         return {
-            "loss": loss.item(),
             "policy_loss": policy_loss.item(),
             "value_loss": value_loss.item(),
             "entropy": entropy.mean().item(),

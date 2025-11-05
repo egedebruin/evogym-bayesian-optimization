@@ -52,7 +52,7 @@ class RL(ABC, nn.Module):
         self.critic_optimizer = torch.optim.Adam(critic_params, lr=critic_lr)
 
     def set_policy_optimizer(self, policy_weights, policy_lr):
-        self.policy_optimizer = torch.optim.Adam(list(policy_weights.values()), lr=policy_lr)
+        self.policy_optimizer = torch.optim.Adam(policy_weights, lr=policy_lr)
 
     def set_critic_parameters(self, args):
         # Critic weights

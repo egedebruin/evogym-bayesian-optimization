@@ -47,6 +47,9 @@ class DDPG(RL):
         q_value = h2 @ self.target_critic_output_weights + self.target_critic_output_biases
         return q_value.squeeze(-1)
 
+    def set_policy_optimizer(self, policy_weights, policy_lr):
+        super().set_policy_optimizer(list(policy_weights.values()), policy_lr)
+
     def post_action(self, policy_weights, sensor_input, normalized_sensor_input, next_sensor_input, normalized_next_sensor_input, reward, raw_action, buffer):
         buffer.append((normalized_sensor_input, raw_action, reward, normalized_next_sensor_input))
         self.update_norm(sensor_input, next_sensor_input)
