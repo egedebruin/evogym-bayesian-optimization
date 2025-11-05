@@ -46,14 +46,9 @@ class ControllerNN(Controller):
 
         return self.rl_agent.norm_sensor_input(sensor_input)
 
-    def post_action(self, sim, sensor_input, normalized_sensor_input, raw_action, previous_position, sensors, buffer):
+    def post_action(self, sensor_input, normalized_sensor_input, next_sensor_input, normalized_next_sensor_input, reward, raw_action, buffer):
         if self.rl_agent is None:
             return
-
-        reward = (np.mean(sim.object_pos_at_time(sim.get_time(), 'robot')[0]) - np.mean(previous_position[0])) * 10
-
-        next_sensor_input = sensors.get_input_from_sensors(sim)
-        normalized_next_sensor_input = self.rl_agent.norm_sensor_input(next_sensor_input)
         self.rl_agent.post_action(self.policy_weights, sensor_input, normalized_sensor_input, next_sensor_input, normalized_next_sensor_input, reward, raw_action, buffer)
 
     def post_rollout(self, last_sensor_input):

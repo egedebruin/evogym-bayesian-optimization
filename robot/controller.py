@@ -9,7 +9,7 @@ class Controller(ABC):
     def adjust_sensor_input(self, sensor_input):
         return sensor_input
 
-    def post_action(self, sim, sensor_input, normalized_sensor_input, raw_action, previous_position, sensors, buffer):
+    def post_action(self, sensor_input, normalized_sensor_input, next_sensor_input, normalized_next_sensor_input, reward, raw_action, buffer):
         return
 
     def post_rollout(self, last_sensor_input):

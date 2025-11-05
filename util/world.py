@@ -1,5 +1,6 @@
 import json
 import uuid
+from unicodedata import bidirectional
 
 import numpy as np
 import os
@@ -39,6 +40,7 @@ def run_simulator(sim, controller, sensors, viewer, simulator_length, headless, 
     sensor_input = None
     normalized_sensor_input = None
     raw_action = None
+    current_extra_metrics = None
 
     for simulation_step in range(simulator_length):
 
@@ -57,10 +59,18 @@ def run_simulator(sim, controller, sensors, viewer, simulator_length, headless, 
             sim.set_action('robot', adjusted_action)
 
             previous_position = sim.object_pos_at_time(sim.get_time(), 'robot')
+            current_extra_metrics = []
+            current_extra_metrics = extra_metrics_for_objective_value('before', sim, current_extra_metrics)
 
         # ----- Learning step -----
         if simulation_step % 5 == 4:
-            controller.post_action(sim, sensor_input, normalized_sensor_input, raw_action, previous_position, sensors, transition_buffer)
+            current_position = sim.object_pos_at_time(sim.get_time(), 'robot')
+            current_extra_metrics = extra_metrics_for_objective_value('after', sim, current_extra_metrics)
+            reward = calculate_reward(previous_position, current_position, current_extra_metrics, generation_index) * 10
+
+            next_sensor_input = sensors.get_input_from_sensors(sim)
+            normalized_next_sensor_input = controller.adjust_sensor_input(next_sensor_input)
+            controller.post_action(sensor_input, normalized_sensor_input, next_sensor_input, normalized_next_sensor_input, reward, raw_action, transition_buffer)
 
         # Step simulation
         sim.step()
@@ -136,7 +146,7 @@ def add_extra_attributes(world, rng):
     return world
 
 def calculate_objective_value(start_position, end_position, extra_metrics, generation_index):
-    if config.ENVIRONMENT == 'simple' or config.ENVIRONMENT == 'rugged' or config.ENVIRONMENT == 'steps' or config.ENVIRONMENT == 'random':
+    if config.ENVIRONMENT in ['simple', 'rugged', 'step', 'random']:
         return np.mean(end_position[0]) - np.mean(start_position[0])
     elif config.ENVIRONMENT == 'bidirectional':
         if generation_index % 2 == 0:
@@ -149,6 +159,19 @@ def calculate_objective_value(start_position, end_position, extra_metrics, gener
     elif config.ENVIRONMENT == 'carry' or config.ENVIRONMENT == 'catch':
         if np.min(extra_metrics[1][1]) < 1.5:
             return -abs(np.mean(extra_metrics[1][0]) - np.mean(end_position[0]))
+        return np.mean(extra_metrics[1][0]) - np.mean(extra_metrics[0][0])
+    else:
+        raise ValueError(f"Environment {config.ENVIRONMENT} does not exist.")
+
+def calculate_reward(start_position, end_position, extra_metrics, generation_index):
+    if config.ENVIRONMENT in ['simple', 'rugged', 'step', 'random', 'bidirectional', 'climb']:
+        return calculate_objective_value(start_position, end_position, extra_metrics, generation_index)
+    elif config.ENVIRONMENT == 'jump':
+        return np.mean(end_position[1]) - np.mean(start_position[1])
+    elif config.ENVIRONMENT in ['carry', 'catch']:
+        if np.min(extra_metrics[1][1]) < 1.5 or np.min(extra_metrics[1][1]) > 8:
+            return -(abs(np.mean(extra_metrics[1][0]) - np.mean(end_position[0])) -
+                    abs(np.mean(extra_metrics[0][0]) - np.mean(start_position[0])))
         return np.mean(extra_metrics[1][0]) - np.mean(extra_metrics[0][0])
     else:
         raise ValueError(f"Environment {config.ENVIRONMENT} does not exist.")
