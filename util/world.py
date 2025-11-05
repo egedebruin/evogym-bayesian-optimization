@@ -1,16 +1,17 @@
-import random
+import json
+import uuid
 
 import numpy as np
 import os
 
-import torch
 from evogym import EvoWorld, EvoSim, EvoViewer, utils, WorldObject
 
 from configs import config
+from worlds import random_environment_creator
+
 
 def build_world(robot_structure, rng):
-    env = get_environment()
-    world = EvoWorld.from_json(os.path.join('worlds', env))
+    world = get_environment(rng)
     x, y = start_position_robot()
     world.add_from_array(
         name='robot',
@@ -83,20 +84,27 @@ def start_position_robot():
         return 100, 1
     return 1, 1
 
-def get_environment():
+def get_environment(rng):
     if config.ENVIRONMENT == 'simple' or config.ENVIRONMENT == 'jump' or config.ENVIRONMENT == 'catch' or config.ENVIRONMENT == 'bidirectional':
-        env = 'simple_environment.json'
+        world = EvoWorld.from_json(os.path.join('worlds', 'simple_environment.json'))
     elif config.ENVIRONMENT == 'climb':
-        env = 'climb_environment.json'
+        world = EvoWorld.from_json(os.path.join('worlds', 'climb_environment.json'))
     elif config.ENVIRONMENT == 'carry':
-        env = 'carry_environment.json'
+        world = EvoWorld.from_json(os.path.join('worlds', 'carry_environment.json'))
     elif config.ENVIRONMENT == 'rugged':
-        env = 'rugged_environment.json'
+        world = EvoWorld.from_json(os.path.join('worlds', 'rugged_environment.json'))
     elif config.ENVIRONMENT == 'steps':
-        env = 'steps_environment.json'
+        world = EvoWorld.from_json(os.path.join('worlds', 'steps_environment.json'))
+    elif config.ENVIRONMENT == 'random':
+        filename = str(uuid.uuid4())
+        contents = random_environment_creator.make(rng)
+        with open(f'worlds/random/{filename}.json', 'w') as outfile:
+            json.dump(contents, outfile, indent=4)
+        world = EvoWorld.from_json(os.path.join('worlds', 'random', f'{filename}.json'))
+        os.remove(f'worlds/random/{filename}.json')
     else:
         raise ValueError(f"Environment {config.ENVIRONMENT} does not exist.")
-    return env
+    return world
 
 
 def tracker(viewer):
@@ -128,7 +136,7 @@ def add_extra_attributes(world, rng):
     return world
 
 def calculate_objective_value(start_position, end_position, extra_metrics, generation_index):
-    if config.ENVIRONMENT == 'simple' or config.ENVIRONMENT == 'rugged' or config.ENVIRONMENT == 'steps':
+    if config.ENVIRONMENT == 'simple' or config.ENVIRONMENT == 'rugged' or config.ENVIRONMENT == 'steps' or config.ENVIRONMENT == 'random':
         return np.mean(end_position[0]) - np.mean(start_position[0])
     elif config.ENVIRONMENT == 'bidirectional':
         if generation_index % 2 == 0:

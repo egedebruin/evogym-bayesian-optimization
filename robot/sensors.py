@@ -58,7 +58,7 @@ class Sensors:
 
             # Ground-touch sensor
             contact = detect_ground_contact(robot_positions, ground_positions, self.voxel_index_to_sensor_index, [actuator_index])
-            # sensor_input = np.concatenate((sensor_input, [1.0 if contact else 0.0]))
+            sensor_input = np.concatenate((sensor_input, [1.0 if contact else 0.0]))
 
             if config.ENVIRONMENT == 'carry' or config.ENVIRONMENT == 'catch':
                 # Distance-to-package sensor

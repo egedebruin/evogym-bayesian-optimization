@@ -7,7 +7,7 @@ from robot.brain import Brain
 
 
 class BrainNN(Brain):
-    NUMBER_OF_INPUT_NEURONS = 29
+    NUMBER_OF_INPUT_NEURONS = 30
     NUMBER_OF_HIDDEN_NEURONS = 10
     NUMBER_OF_OUTPUT_NEURONS = 1
     

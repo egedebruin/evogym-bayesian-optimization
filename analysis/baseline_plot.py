@@ -8,8 +8,8 @@ import plot  # Assumes you have a module `plot` with `get_data`
 # Constants
 POP_SIZE = 200
 EVALS_PER_GEN = 50
-REPETITIONS = 20
-SUB_FOLDER = 'baseline'
+REPETITIONS = 5
+SUB_FOLDER = 'rl-test'
 
 LABELS = {
     (-1, 'none', 0): 'Individual',
@@ -45,7 +45,7 @@ LINE_STYLES = {
 }
 
 
-def make_the_plot(inherit, inherit_type, inherit_pool, environment, ax):
+def make_the_plot(inherit, inherit_type, inherit_pool, environment, ax, learn_method):
     GENERATIONS = 30
     key = (inherit, inherit_type, inherit_pool)
     label = LABELS.get(key)
@@ -56,7 +56,7 @@ def make_the_plot(inherit, inherit_type, inherit_pool, environment, ax):
 
     curves = []
     for repetition in range(1, REPETITIONS + 1):
-        data_path = f'results/learn-{EVALS_PER_GEN}_inherit-{inherit}_type-{inherit_type}_pool-{inherit_pool}_environment-{environment}_repetition-{repetition}'
+        data_path = f'results/{SUB_FOLDER}/learn-{EVALS_PER_GEN}_inherit-{inherit}_type-{inherit_type}_pool-{inherit_pool}_environment-{environment}_method-{learn_method}_repetition-{repetition}'
         data_array = plot.get_data(data_path, GENERATIONS)
 
         if data_array is None:
@@ -68,7 +68,7 @@ def make_the_plot(inherit, inherit_type, inherit_pool, environment, ax):
 
         max_vals = np.max(data_array, axis=1)
         running_max = np.maximum.accumulate(max_vals)
-        curves.append(max_vals)
+        curves.append(running_max)
 
     if not curves:
         return
@@ -80,7 +80,7 @@ def make_the_plot(inherit, inherit_type, inherit_pool, environment, ax):
     q25 = np.percentile(curves, 25, axis=0)
     q75 = np.percentile(curves, 75, axis=0)
 
-    ax.plot(x_vals, mean_vals, label=label, color=color, linestyle=LINE_STYLES.get(key))
+    ax.plot(x_vals, mean_vals, label=label, color='blue' if learn_method == 'bo' else 'green' if learn_method == 'ppo' else 'red', linestyle=LINE_STYLES.get(key))
     ax.fill_between(x_vals, q25, q75, color=color, alpha=0.2)
 
     # csv_data = {'cat': [LABELS[key] for _ in range(GENERATIONS)], 'x': range(GENERATIONS), 'y': np.mean(curves, axis=0),
@@ -104,7 +104,7 @@ def main():
         "lines.linewidth": 2.2
     })
 
-    environments = ['bidirectional']
+    environments = ['simple', 'carry']
     strategy_keys = list(LABELS.keys())  # 6 total strategies
 
     fig, axes = plt.subplots(nrows=2, figsize=(10, 10), sharey=False)
@@ -113,7 +113,8 @@ def main():
     for i, env in enumerate(environments):
         ax = axes[i]
         for idx, key in enumerate(strategy_keys):
-            make_the_plot(*key, env, ax)
+            for learn_method in ['bo', 'ddpg', 'ppo']:
+                make_the_plot(*key, env, ax, learn_method)
 
         ax.set_title(f"Environment: {env.capitalize()}", weight='bold', pad=15)
         ax.set_xlabel("Evaluations")

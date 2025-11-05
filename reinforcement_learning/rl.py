@@ -6,6 +6,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+from robot.brain_nn import BrainNN
 from robot.running_norm import RunningNorm
 
 
@@ -127,7 +128,7 @@ class RL(ABC, nn.Module):
             self.do_update_norm = True
 
     def create_global_critic_params(self, num_actuators):
-        input_dim = 29
+        input_dim = BrainNN.NUMBER_OF_INPUT_NEURONS
         hidden_dim1 = 128  # first hidden layer
         hidden_dim2 = 64  # second hidden layer
         output_dim = 1  # Q-value
