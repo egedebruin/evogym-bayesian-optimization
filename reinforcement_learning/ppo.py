@@ -8,14 +8,15 @@ from reinforcement_learning.rl import RL
 
 class PPO(RL):
     def __init__(self, num_actuators):
-        self.gamma = 0.99  # 0.95 -> 0.99, short-term -> long-term
-        self.lam = 0.97  # 0.9 -> 0.99, stable gradients -> noisy gradients
-        self.clip_eps = 0.3  # 0.1 -> 0.3, low changes -> high changes
-        self.entropy_coef = 0.05  # 0.001 -> 0.1, fast convergence -> exploration
+        self.gamma = 0.95  # 0.95 -> 0.99, short-term -> long-term
+        self.lam = 0.9  # 0.9 -> 0.99, stable gradients -> noisy gradients
+        self.clip_eps = 0.5  # 0.1 -> 0.3, low changes -> high changes
+        self.entropy_coef = 0.01  # 0.01 -> 0.1, fast convergence -> exploration
         self.value_coef = 0.2  # 0.1 -> 1.0, focus on policy -> focus on value
-        self.max_grad_norm = 0.5  # 0.3 -> 1.0, lower gradients -> higher gradients
+        self.max_grad_norm = 1.0  # 0.3 -> 1.0, lower gradients -> higher gradients
         self.critic_lr = 1e-2  # 1e-5 -> 3e-3, slow updates -> fast updates
         self.policy_lr = 1e-2  # 1e-5 -> 3e-3, slow updates -> fast updates
+        self.init_log_std = -2 # 0 -> -5, high initial noise -> low initial noise
 
         super().__init__(num_actuators)
 
@@ -64,7 +65,7 @@ class PPO(RL):
         return advantages, returns
 
     def set_policy_optimizer(self, policy_weights, policy_lr):
-        self.log_std = nn.Parameter(torch.ones_like(policy_weights['output_biases']) * -2)
+        self.log_std = nn.Parameter(torch.ones_like(policy_weights['output_biases']) * self.init_log_std)
         super().set_policy_optimizer(list(policy_weights.values()) + [self.log_std], policy_lr)
 
     def post_action(self, policy_weights, sensor_input, normalized_sensor_input, next_sensor_input,
@@ -134,7 +135,7 @@ class PPO(RL):
         # --- Compute next value for advantage / return ---
         with torch.no_grad():
             next_obs = torch.tensor(np.array(last_sensor_input, dtype=np.float32)).unsqueeze(0)
-            next_value = self.forward_critic(next_obs.reshape(1, -1)).to(values.device)  # [1]
+            next_value = self.forward_critic(next_obs.reshape(1, -1))  # [1]
         if next_value.ndim == 0:
             next_value = next_value.unsqueeze(0)
 
@@ -167,16 +168,16 @@ class PPO(RL):
 
         # --- Total loss ---
         loss = 0
-        if self.do_update_policy:
-            loss = loss + policy_loss - self.entropy_coef * entropy.mean()
         if self.do_update_critic:
             loss = loss + self.value_coef * value_loss
+        if self.do_update_policy:
+            loss = loss + policy_loss - self.entropy_coef * entropy.mean()
 
         # --- Total loss already computed as `loss` ---
-        if self.do_update_policy:
-            self.policy_optimizer.zero_grad()
         if self.do_update_critic:
             self.critic_optimizer.zero_grad()
+        if self.do_update_policy:
+            self.policy_optimizer.zero_grad()
 
         # Backprop
         if self.do_update_policy or self.do_update_critic:

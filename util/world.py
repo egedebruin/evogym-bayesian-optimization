@@ -169,10 +169,15 @@ def calculate_reward(start_position, end_position, extra_metrics, generation_ind
     elif config.ENVIRONMENT == 'jump':
         return np.mean(end_position[1]) - np.mean(start_position[1])
     elif config.ENVIRONMENT in ['carry', 'catch']:
-        if np.min(extra_metrics[1][1]) < 1.5 or np.min(extra_metrics[1][1]) > 8:
-            return -(abs(np.mean(extra_metrics[1][0]) - np.mean(end_position[0])) -
-                    abs(np.mean(extra_metrics[0][0]) - np.mean(start_position[0])))
-        return np.mean(extra_metrics[1][0]) - np.mean(extra_metrics[0][0])
+        # positive reward for moving forward
+        reward = 0
+        if 1.5 < np.min(extra_metrics[1][1]) < 8.5:
+            reward += (np.mean(extra_metrics[1][0]) - np.mean(extra_metrics[0][0]))
+
+        # negative reward for robot/block separating
+        reward += abs(np.mean(start_position[0]) - np.mean(extra_metrics[0][0])) - abs(
+            np.mean(end_position[0]) - np.mean(extra_metrics[1][0]))
+        return reward
     else:
         raise ValueError(f"Environment {config.ENVIRONMENT} does not exist.")
 
