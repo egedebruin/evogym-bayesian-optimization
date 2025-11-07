@@ -10,8 +10,8 @@ class PPO(RL):
     def __init__(self, num_actuators):
         self.gamma = 0.95  # 0.95 -> 0.99, short-term -> long-term
         self.lam = 0.9  # 0.9 -> 0.99, stable gradients -> noisy gradients
-        self.clip_eps = 0.3  # 0.1 -> 0.3, low changes -> high changes
-        self.entropy_coef = 0.01  # 0.01 -> 0.1, fast convergence -> exploration
+        self.clip_eps = 0.2  # 0.1 -> 0.3, low changes -> high changes
+        self.entropy_coef = 0.005  # 0.005 -> 0.1, fast convergence -> exploration
         self.value_coef = 0.2  # 0.1 -> 1.0, focus on policy -> focus on value
         self.max_grad_norm = 0.5  # 0.3 -> 1.0, lower gradients -> higher gradients
         self.critic_lr = 1e-4  # 1e-5 -> 3e-3, slow updates -> fast updates
@@ -39,6 +39,8 @@ class PPO(RL):
         mu, std = self.forward_policy(obs, policy_weights)
         dist = torch.distributions.Normal(mu, std)
         action = dist.rsample()
+        if not self.do_update_policy:
+            action = mu
         log_prob = dist.log_prob(action).sum(-1)
         flat_obs = obs.reshape(obs.shape[0], -1)
         value = self.forward_critic(flat_obs)
@@ -113,7 +115,7 @@ class PPO(RL):
             rew_np = (rew_np - rew_np.mean()) / (rew_np.std() + 1e-8)
         rew_tensor = torch.tensor(rew_np, dtype=torch.float32)
 
-        for i in range(5):
+        for i in range(3):
             self.update(
                 obs=obs_tensor,
                 actions=act_tensor,
@@ -173,8 +175,8 @@ class PPO(RL):
 
         # PPO value clipping
         v_clipped = v_old + torch.clamp(v - v_old, -clip_eps, clip_eps)
-        value_loss1 = (v - returns).pow(2)
-        value_loss2 = (v_clipped - returns).pow(2)
+        value_loss1 = F.smooth_l1_loss(v, returns, reduction='none')
+        value_loss2 = F.smooth_l1_loss(v_clipped, returns, reduction='none')
         value_loss = 0.5 * torch.max(value_loss1, value_loss2).mean()
 
         # --- Total loss ---

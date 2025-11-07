@@ -99,6 +99,7 @@ def learn(individual, rng):
 			controller_values = brain.next_point_to_controller_values(best_brain, actuator_indices)
 			args = {k: torch.nn.Parameter(torch.tensor(v, dtype=torch.float32))
 					for k, v in controller_values.items()}
+			next_point = best_brain
 		elif config.LEARN_METHOD == TYPE_DDPG or config.LEARN_METHOD == TYPE_PPO:
 			# Intermediate iteration
 			args = previous_policy
