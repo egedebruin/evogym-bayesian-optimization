@@ -10,12 +10,12 @@ class PPO(RL):
     def __init__(self, num_actuators):
         self.gamma = 0.95  # 0.95 -> 0.99, short-term -> long-term
         self.lam = 0.9  # 0.9 -> 0.99, stable gradients -> noisy gradients
-        self.clip_eps = 0.5  # 0.1 -> 0.3, low changes -> high changes
+        self.clip_eps = 0.3  # 0.1 -> 0.3, low changes -> high changes
         self.entropy_coef = 0.01  # 0.01 -> 0.1, fast convergence -> exploration
         self.value_coef = 0.2  # 0.1 -> 1.0, focus on policy -> focus on value
-        self.max_grad_norm = 1.0  # 0.3 -> 1.0, lower gradients -> higher gradients
-        self.critic_lr = 1e-2  # 1e-5 -> 3e-3, slow updates -> fast updates
-        self.policy_lr = 1e-2  # 1e-5 -> 3e-3, slow updates -> fast updates
+        self.max_grad_norm = 0.5  # 0.3 -> 1.0, lower gradients -> higher gradients
+        self.critic_lr = 1e-4  # 1e-5 -> 3e-3, slow updates -> fast updates
+        self.policy_lr = 5e-3  # 1e-5 -> 3e-3, slow updates -> fast updates
         self.init_log_std = -2 # 0 -> -5, high initial noise -> low initial noise
 
         super().__init__(num_actuators)
@@ -32,7 +32,7 @@ class PPO(RL):
     def forward_policy(self, x, policy_weights):
         h = F.relu(x @ policy_weights['hidden_weights'] + policy_weights['hidden_biases'])
         mu = torch.sigmoid(h @ policy_weights['output_weights'] + policy_weights['output_biases'])
-        std = torch.exp(self.log_std)
+        std = torch.exp(self.log_std).expand_as(mu)
         return mu, std
 
     def get_action_and_value(self, obs, policy_weights):
@@ -63,7 +63,7 @@ class PPO(RL):
         return advantages, returns
 
     def set_policy_optimizer(self, policy_weights, policy_lr):
-        self.log_std = nn.Parameter(torch.ones_like(policy_weights['output_biases']) * self.init_log_std)
+        self.log_std = nn.Parameter(torch.full_like(policy_weights['output_biases'], self.init_log_std))
         super().set_policy_optimizer(list(policy_weights.values()) + [self.log_std], policy_lr)
 
     def post_action(self, policy_weights, sensor_input, normalized_sensor_input, next_sensor_input,
@@ -104,9 +104,14 @@ class PPO(RL):
         obs_tensor = torch.tensor(obs_np, dtype=torch.float32)  # [T, M, input_dim]
         act_tensor = torch.tensor(acts_np, dtype=torch.float32)  # [T, M, action_dim]
         logp_tensor = torch.tensor(logp_np, dtype=torch.float32)  # [T, M]
-        rew_tensor = torch.tensor(np.array(self.rewards, dtype=np.float32), dtype=torch.float32)  # [T]
         val_tensor = torch.tensor(vals_np, dtype=torch.float32).squeeze(-1)  # [T]
         logp_per_timestep = logp_tensor.sum(dim=1)  # [T]
+
+        # Normalize rewards
+        rew_np = np.array(self.rewards, dtype=np.float32)  # shape [T]
+        if rew_np.std() > 1e-8:
+            rew_np = (rew_np - rew_np.mean()) / (rew_np.std() + 1e-8)
+        rew_tensor = torch.tensor(rew_np, dtype=torch.float32)
 
         for i in range(5):
             self.update(
@@ -163,7 +168,14 @@ class PPO(RL):
         policy_loss = -torch.min(surr1, surr2).mean()
 
         # --- Value loss ---
-        value_loss = F.mse_loss(values_pred.squeeze(-1), returns.detach())
+        v = values_pred.squeeze(-1)
+        v_old = values.detach()
+
+        # PPO value clipping
+        v_clipped = v_old + torch.clamp(v - v_old, -clip_eps, clip_eps)
+        value_loss1 = (v - returns).pow(2)
+        value_loss2 = (v_clipped - returns).pow(2)
+        value_loss = 0.5 * torch.max(value_loss1, value_loss2).mean()
 
         # --- Total loss ---
         loss = 0
@@ -182,11 +194,11 @@ class PPO(RL):
         if self.do_update_policy or self.do_update_critic:
             loss.backward()
 
-        # Apply only the requested updates
         torch.nn.utils.clip_grad_norm_([
             policy_weights['hidden_weights'], policy_weights['hidden_biases'],
             policy_weights['output_weights'], policy_weights['output_biases']
         ], self.max_grad_norm)
+
         if self.do_update_critic:
             self.critic_optimizer.step()
         if self.do_update_policy:

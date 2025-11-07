@@ -78,7 +78,7 @@ def learn(individual, rng):
 	experience = []
 	transition_buffer = deque(maxlen=2000)
 	for iteration in range(config.LEARN_ITERATIONS):
-		logger.info(f"Learn generation {iteration + 1}")
+		logger.info(f"Learn iteration {iteration + 1}")
 
 		next_point = get_next_point_from_inheritance(iteration, optimizer, brain, actuator_indices, inherited_experience)
 
