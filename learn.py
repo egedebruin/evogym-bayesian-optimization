@@ -87,7 +87,7 @@ def learn(individual, rng):
 			args = {k: torch.nn.Parameter(torch.tensor(v, dtype=torch.float32))
 				for k, v in controller_values.items()}
 		elif config.LEARN_METHOD == TYPE_DDPG or config.LEARN_METHOD == TYPE_PPO:
-			rl_agent.set_update_boolean_values(iteration)
+			rl_agent.set_update_networks(iteration)
 			if iteration == 0:
 				controller_values = brain.next_point_to_controller_values(next_point, actuator_indices)
 				args = {k: torch.nn.Parameter(torch.tensor(v, dtype=torch.float32))

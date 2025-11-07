@@ -1,13 +1,11 @@
 import random
 from abc import abstractmethod, ABC
 
-import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
 from robot.brain_nn import BrainNN
-from robot.running_norm import RunningNorm
 
 
 class RL(ABC, nn.Module):
@@ -27,9 +25,6 @@ class RL(ABC, nn.Module):
         self.critic_hidden2_biases = None
         self.critic_output_weights = None
         self.critic_output_biases = None
-
-        self.velocity_indices = list(range(9, 27))
-        self.velocity_norm = RunningNorm()
 
         self.do_update_policy = False
         self.do_update_critic = False
@@ -64,9 +59,8 @@ class RL(ABC, nn.Module):
         self.critic_output_weights = RL.from_args(args, 'critic_output_weights')
         self.critic_output_biases = RL.from_args(args, 'critic_output_biases')
 
-    @abstractmethod
     def post_action(self, policy_weights, sensor_input, normalized_sensor_input, next_sensor_input, normalized_next_sensor_input, reward, raw_action, buffer):
-        pass
+        return
 
     @abstractmethod
     def control(self, sensor_input, policy_weights):
@@ -85,47 +79,10 @@ class RL(ABC, nn.Module):
         q_value = h2 @ self.critic_output_weights + self.critic_output_biases
         return q_value.squeeze(-1)
 
-    def update_norm(self, sensor_input, next_sensor_input):
-        if not self.do_update_norm:
-            return
-        vel_indices = list(range(9, 27))
-
-        # Convert list of arrays to single NumPy array first
-        sensor_input = torch.as_tensor(np.array(sensor_input, dtype=np.float32))
-        next_sensor_input = torch.as_tensor(np.array(next_sensor_input, dtype=np.float32))
-
-        # sensor_input: (M, input_dim) for one transition
-        vels = sensor_input[:, vel_indices].cpu().numpy()
-        mask = (vels != 0)
-        self.velocity_norm.update(vels, mask=mask)
-
-        next_vels = next_sensor_input[:, vel_indices].cpu().numpy()
-        next_mask = (next_vels != 0)
-        self.velocity_norm.update(next_vels, mask=next_mask)
-
-    def norm_sensor_input(self, sensor_input):
-        processed_inputs = []
-        vel_indices = list(range(9, 27))
-
-        for sensors in sensor_input:
-            sensors = np.array(sensors, dtype=np.float32)
-
-            # Just normalize using *existing* stats, never update here
-            vels = sensors[vel_indices]
-            mask = (vels != 0)
-            vels_normed = self.velocity_norm.normalize(vels, mask=mask)
-            sensors[vel_indices] = vels_normed
-
-            processed_inputs.append(sensors)
-        return processed_inputs
-
-    def set_update_boolean_values(self, iteration):
-        if iteration > 3:
+    def set_update_networks(self, iteration):
+        if iteration >= 0:
             self.do_update_critic = True
             self.do_update_policy = True
-
-        if iteration > 5:
-            self.do_update_norm = True
 
     def create_global_critic_params(self, num_actuators):
         input_dim = BrainNN.NUMBER_OF_INPUT_NEURONS

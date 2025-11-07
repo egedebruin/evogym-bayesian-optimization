@@ -3,6 +3,7 @@ import torch
 import torch.nn.functional as F
 
 from robot.controller import Controller
+from robot.running_norm import RunningNorm
 
 
 class ControllerNN(Controller):
@@ -21,6 +22,8 @@ class ControllerNN(Controller):
         }
 
         self.rl_agent = None
+        self.velocity_indices = list(range(9, 27))
+        self.velocity_norm = RunningNorm(0.0, 100.0)
 
     def set_rl_agent(self, rl_agent):
         self.rl_agent = rl_agent
@@ -41,10 +44,22 @@ class ControllerNN(Controller):
         return raw_action
 
     def adjust_sensor_input(self, sensor_input):
-        if self.rl_agent is None:
-            return sensor_input
+        return self.norm_sensor_input(sensor_input)
 
-        return self.rl_agent.norm_sensor_input(sensor_input)
+    def norm_sensor_input(self, sensor_input):
+        processed_inputs = []
+
+        for sensors in sensor_input:
+            sensors = np.array(sensors, dtype=np.float32)
+
+            # Just normalize using *existing* stats, never update here
+            vels = sensors[self.velocity_indices]
+            mask = (vels != 0)
+            vels_normed = self.velocity_norm.normalize(vels, mask=mask)
+            sensors[self.velocity_indices] = vels_normed
+
+            processed_inputs.append(sensors)
+        return processed_inputs
 
     def post_action(self, sensor_input, normalized_sensor_input, next_sensor_input, normalized_next_sensor_input, reward, raw_action, buffer):
         if self.rl_agent is None:

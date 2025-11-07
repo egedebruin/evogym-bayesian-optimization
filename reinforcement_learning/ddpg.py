@@ -51,9 +51,9 @@ class DDPG(RL):
         super().set_policy_optimizer(list(policy_weights.values()), policy_lr)
 
     def post_action(self, policy_weights, sensor_input, normalized_sensor_input, next_sensor_input, normalized_next_sensor_input, reward, raw_action, buffer):
+        super().post_action(policy_weights, sensor_input, normalized_sensor_input, next_sensor_input,
+                            normalized_next_sensor_input, reward, raw_action, buffer)
         buffer.append((normalized_sensor_input, raw_action, reward, normalized_next_sensor_input))
-        self.update_norm(sensor_input, next_sensor_input)
-
         self.update(policy_weights, buffer)
 
     def control(self, sensor_input, policy_weights):
@@ -86,37 +86,37 @@ class DDPG(RL):
         rewards = np.array(rewards).reshape(-1, 1)
         next_states = np.stack(next_states)
 
-        sensor_inputs = torch.as_tensor(states, dtype=torch.float32)
+        normalized_sensor_inputs = torch.as_tensor(states, dtype=torch.float32)
         raw_actions = torch.as_tensor(actions, dtype=torch.float32)
         rewards = torch.as_tensor(rewards, dtype=torch.float32)
-        next_sensor_inputs = torch.as_tensor(next_states, dtype=torch.float32)
+        normalized_next_sensor_inputs = torch.as_tensor(next_states, dtype=torch.float32)
 
         if self.do_update_critic:
             for i in range(5):
-                self.update_critic(policy_weights, sensor_inputs, raw_actions, rewards, next_sensor_inputs)
+                self.update_critic(policy_weights, normalized_sensor_inputs, raw_actions, rewards, normalized_next_sensor_inputs)
         if self.do_update_policy:
-            self.update_policy(policy_weights, sensor_inputs)
+            self.update_policy(policy_weights, normalized_sensor_inputs)
 
-    def update_critic(self, policy_weights, sensor_inputs, raw_actions, rewards, next_sensor_inputs):
+    def update_critic(self, policy_weights, normalized_sensor_inputs, raw_actions, rewards, normalized_next_sensor_inputs):
         """
-        sensor_inputs: (B, M, input_dim)
+        normalized_sensor_inputs: (B, M, input_dim)
         raw_actions: (B, M, output_dim)
         rewards: (B, 1)
-        next_sensor_inputs: (B, M, input_dim)
+        normalized_next_sensor_inputs: (B, M, input_dim)
         """
-        B, M, input_dim = sensor_inputs.shape
+        B, M, input_dim = normalized_sensor_inputs.shape
 
         # Concatenate all actuator states and actions per batch
-        critic_inputs = torch.cat([sensor_inputs.reshape(B, -1), raw_actions.reshape(B, -1)], dim=-1)
+        critic_inputs = torch.cat([normalized_sensor_inputs.reshape(B, -1), raw_actions.reshape(B, -1)], dim=-1)
         next_policy_actions = []
 
         with torch.no_grad():
             for m in range(M):
-                next_hidden = F.relu(next_sensor_inputs[:, m, :] @ policy_weights['hidden_weights'] + policy_weights['hidden_biases'])
+                next_hidden = F.relu(normalized_next_sensor_inputs[:, m, :] @ policy_weights['hidden_weights'] + policy_weights['hidden_biases'])
                 next_a = torch.sigmoid(next_hidden @ policy_weights['output_weights'] + policy_weights['output_biases'])
                 next_policy_actions.append(next_a)
             next_policy_actions = torch.cat(next_policy_actions, dim=-1)  # (B, M*output_dim)
-            next_critic_inputs = torch.cat([next_sensor_inputs.reshape(B, -1), next_policy_actions], dim=-1)
+            next_critic_inputs = torch.cat([normalized_next_sensor_inputs.reshape(B, -1), next_policy_actions], dim=-1)
             target_q = rewards.squeeze(-1) + self.gamma * self.forward_target_critic(next_critic_inputs)
 
         # Predicted Q
@@ -146,19 +146,19 @@ class DDPG(RL):
         ]:
             target.data.copy_(self.tau * source.data + (1.0 - self.tau) * target.data)
 
-    def update_policy(self, policy_weights, sensor_inputs):
-        B, M, input_dim = sensor_inputs.shape
+    def update_policy(self, policy_weights, normalized_sensor_inputs):
+        B, M, input_dim = normalized_sensor_inputs.shape
 
         all_actions = []
 
         for m in range(M):
-            hidden = F.relu(sensor_inputs[:, m, :] @ policy_weights['hidden_weights'] + policy_weights['hidden_biases'])
+            hidden = F.relu(normalized_sensor_inputs[:, m, :] @ policy_weights['hidden_weights'] + policy_weights['hidden_biases'])
             a = torch.sigmoid(hidden @ policy_weights['output_weights'] + policy_weights['output_biases'])
             all_actions.append(a)
         all_actions = torch.cat(all_actions, dim=-1)  # (B, M*output_dim)
 
         # Concatenate states and actions for global critic
-        critic_inputs = torch.cat([sensor_inputs.reshape(B, -1), all_actions], dim=-1)
+        critic_inputs = torch.cat([normalized_sensor_inputs.reshape(B, -1), all_actions], dim=-1)
         policy_loss = -self.forward_critic(critic_inputs).mean()
 
         self.policy_optimizer.zero_grad()

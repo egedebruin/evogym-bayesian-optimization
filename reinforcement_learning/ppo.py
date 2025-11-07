@@ -38,9 +38,8 @@ class PPO(RL):
     def get_action_and_value(self, obs, policy_weights):
         mu, std = self.forward_policy(obs, policy_weights)
         dist = torch.distributions.Normal(mu, std)
-        raw_action = dist.rsample()
-        action = torch.sigmoid(raw_action)
-        log_prob = dist.log_prob(raw_action).sum(-1) - torch.log(action * (1 - action) + 1e-6).sum(-1)
+        action = dist.rsample()
+        log_prob = dist.log_prob(action).sum(-1)
         flat_obs = obs.reshape(obs.shape[0], -1)
         value = self.forward_critic(flat_obs)
         return action, log_prob, value
@@ -48,8 +47,7 @@ class PPO(RL):
     def evaluate_actions(self, obs, actions, policy_weights):
         mu, std = self.forward_policy(obs, policy_weights)
         dist = torch.distributions.Normal(mu, std)
-        raw_actions = torch.log(actions.clamp(1e-6, 1 - 1e-6) / (1 - actions.clamp(1e-6, 1 - 1e-6)))
-        log_probs = dist.log_prob(raw_actions).sum(-1) - torch.log(actions * (1 - actions) + 1e-6).sum(-1)
+        log_probs = dist.log_prob(actions).sum(-1)
         entropy = dist.entropy().sum(-1)
         flat_obs = obs.reshape(obs.shape[0], -1)
         values = self.forward_critic(flat_obs)
@@ -70,6 +68,7 @@ class PPO(RL):
 
     def post_action(self, policy_weights, sensor_input, normalized_sensor_input, next_sensor_input,
                     normalized_next_sensor_input, reward, raw_action, buffer):
+        super().post_action(policy_weights, sensor_input, normalized_sensor_input, next_sensor_input, normalized_next_sensor_input, reward, raw_action, buffer)
         self.rewards.append(reward)
 
     def control(self, sensor_input, policy_weights):
@@ -192,8 +191,7 @@ class PPO(RL):
             self.critic_optimizer.step()
         if self.do_update_policy:
             self.policy_optimizer.step()
-
-        self.clip_policy_params(policy_weights)
+            self.clip_policy_params(policy_weights)
 
         return {
             "policy_loss": policy_loss.item(),
