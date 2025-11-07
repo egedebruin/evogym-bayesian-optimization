@@ -79,10 +79,9 @@ class RL(ABC, nn.Module):
         q_value = h2 @ self.critic_output_weights + self.critic_output_biases
         return q_value.squeeze(-1)
 
-    def set_update_networks(self, iteration):
-        if iteration >= 0:
-            self.do_update_critic = True
-            self.do_update_policy = True
+    def set_update_networks(self, update_critic, update_policy):
+        self.do_update_critic = update_critic
+        self.do_update_policy = update_policy
 
     def create_global_critic_params(self, num_actuators):
         input_dim = BrainNN.NUMBER_OF_INPUT_NEURONS
