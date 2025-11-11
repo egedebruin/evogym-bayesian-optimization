@@ -8,6 +8,7 @@ INHERIT_TYPE = 'best' # parent, random, none, similar or best
 SOCIAL_POOL = 8
 LEARN_METHOD = 'bo'
 
+DARWINIAN = True
 RANDOM_LEARNING = False
 LEARN_INHERITED_ALPHA = 2
 LEARN_KAPPA = 3

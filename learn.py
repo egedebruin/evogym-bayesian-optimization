@@ -133,7 +133,7 @@ def learn(individual, rng):
 	return objective_value, best_brain, experience, best_inherited_objective_value, individual
 
 def get_next_point_from_inheritance(iteration, optimizer, brain, actuator_indices, inherited_experience):
-	if iteration == 0 and config.INHERIT_SAMPLES == -1:
+	if iteration == 0 and config.INHERIT_SAMPLES == -1 and config.DARWINIAN:
 		return brain.to_next_point(actuator_indices)
 	elif iteration < config.INHERIT_SAMPLES and len(inherited_experience) > 0:
 		return inherited_experience[iteration][0]

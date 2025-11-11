@@ -3,6 +3,8 @@ import numpy as np
 import os
 import sys
 
+import torch
+
 parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 sys.path.insert(0, parent_dir)
 from configs import config
@@ -43,11 +45,12 @@ def main():
     best_individual = get_best_individual(config.FOLDER)
 
     grid = np.array(ast.literal_eval(best_individual[1]))
-    print(grid)
     sim, viewer = world.build_world(grid, start.make_rng_seed())
 
     experience = ast.literal_eval(best_individual[3])
-    args = Brain.next_point_to_controller_values(experience, sim.get_actuator_indices('robot'))
+    controller_values = Brain.next_point_to_controller_values(experience, sim.get_actuator_indices('robot'))
+    args = {k: torch.nn.Parameter(torch.tensor(v, dtype=torch.float32))
+            for k, v in controller_values.items()}
 
     controller = Controller(args)
     sensors = Sensors(grid)
