@@ -50,7 +50,7 @@ def run_simulator(sim, controller, sensors, viewer, simulator_length, headless, 
 
         # ----- Action step -----
         if simulation_step % 5 == 0:
-            sensor_input = sensors.get_input_from_sensors(sim)
+            sensor_input = sensors.get_input_from_sensors(sim, generation_index)
             normalized_sensor_input = controller.adjust_sensor_input(sensor_input)
 
             raw_action = controller.control(normalized_sensor_input)
@@ -68,7 +68,7 @@ def run_simulator(sim, controller, sensors, viewer, simulator_length, headless, 
             current_extra_metrics = extra_metrics_for_objective_value('after', sim, current_extra_metrics)
             reward = calculate_reward(previous_position, current_position, current_extra_metrics, generation_index) * 10
 
-            next_sensor_input = sensors.get_input_from_sensors(sim)
+            next_sensor_input = sensors.get_input_from_sensors(sim, generation_index)
             normalized_next_sensor_input = controller.adjust_sensor_input(next_sensor_input)
             controller.post_action(sensor_input, normalized_sensor_input, next_sensor_input, normalized_next_sensor_input, reward, raw_action, transition_buffer)
 

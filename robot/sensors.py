@@ -41,7 +41,7 @@ class Sensors:
                         self.voxel_index_to_sensor_index[x_voxel * config.GRID_LENGTH + y_voxel].append(
                             self.sensor_grid_to_sensor_index[(x_voxel + dx, y_voxel + dy)])
 
-    def get_input_from_sensors(self, sim):
+    def get_input_from_sensors(self, sim, generation_index):
         robot_positions = sim.object_pos_at_time(sim.get_time(), 'robot')
         robot_velocities = sim.object_vel_at_time(sim.get_time(), 'robot')
         robot_actuator_indices = sim.get_actuator_indices('robot')
@@ -65,6 +65,12 @@ class Sensors:
                 package_positions = sim.object_pos_at_time(sim.get_time(), 'package')
                 package_input = self._get_input_package(actuator_index, robot_positions, package_positions)
                 sensor_input = np.concatenate((sensor_input, package_input))
+
+            if config.ENVIRONMENT == 'bidirectional2':
+                if generation_index % 2 == 0:
+                    sensor_input = np.concatenate((sensor_input, [1.0]))
+                else:
+                    sensor_input = np.concatenate((sensor_input, [0.0]))
 
             # Time sensor
             # Cyclic input: map 0..25 → 0..2π

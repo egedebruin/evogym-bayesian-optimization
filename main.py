@@ -45,7 +45,9 @@ def calculate_generations():
 
 def set_number_of_sensors():
 	if config.ENVIRONMENT == 'carry' or config.ENVIRONMENT == 'catch':
-		BrainNN.NUMBER_OF_INPUT_NEURONS = BrainNN.NUMBER_OF_INPUT_NEURONS + 2
+		BrainNN.NUMBER_OF_INPUT_NEURONS += 2
+	if config.ENVIRONMENT == 'bidirectional2':
+		BrainNN.NUMBER_OF_INPUT_NEURONS += 1
 
 def main():
 	if config.READ_ARGS:
