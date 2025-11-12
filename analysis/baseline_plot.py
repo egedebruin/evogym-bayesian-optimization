@@ -8,14 +8,14 @@ import plot  # Assumes you have a module `plot` with `get_data`
 # Constants
 POP_SIZE = 200
 EVALS_PER_GEN = 50
-REPETITIONS = 5
-SUB_FOLDER = 'rl-test'
+REPETITIONS = 3
+SUB_FOLDER = 'longer-changing'
 
 LABELS = {
     (-1, 'none', 0): 'Individual',
     (8, 'best', 1): 'Best - N=1',
     (8, 'best', 8): 'Best - N=8',
-    (8, 'parent', 1): 'Parent',
+    (1, 'parent', 1): 'Parent',
     (8, 'random', 1): 'Random - N=1',
     (8, 'random', 8): 'Random - N=8',
     (8, 'similar', 1): 'Similar - N=1',
@@ -37,19 +37,33 @@ LINE_STYLES = {
     (-1, 'none', 0): '--',
     (8, 'best', 1): ':',
     (8, 'best', 8): ':',
-    (8, 'parent', 1): '-',
+    (1, 'parent', 1): '-.',
     (8, 'random', 1): '-.',
     (8, 'random', 8): '-.',
     (8, 'similar', 1): (0, (3, 1, 1, 1)),
     (8, 'similar', 8): (0, (3, 1, 1, 1)),
 }
 
+LEARN_METHOD_TO_LABEL = {
+    'bo': 'BO',
+    'ppo': 'RL-PPO',
+    'ddpg': 'RL-DDPG'
+}
+
+LEARN_METHOD_TO_COLOR = {
+    'bo': 'green',
+    'ppo': 'blue',
+    'ddpg': 'red'
+}
+
 
 def make_the_plot(inherit, inherit_type, inherit_pool, environment, ax, learn_method):
     GENERATIONS = 30
     key = (inherit, inherit_type, inherit_pool)
-    label = LABELS.get(key)
-    color = COLORS.get(key)
+    # label = LABELS.get(key)
+    # color = COLORS.get(key)
+    label = LEARN_METHOD_TO_LABEL.get(learn_method)
+    color = LEARN_METHOD_TO_COLOR.get(learn_method)
 
     if label is None or color is None:
         return  # skip unknown combinations
@@ -65,10 +79,11 @@ def make_the_plot(inherit, inherit_type, inherit_pool, environment, ax, learn_me
             print(f'No data found for {environment}, {inherit}, {inherit_type}, {inherit_pool}, {repetition}')
             print(len(data_array)) if data_array is not None else print("None")
             print()
+            continue
 
-        max_vals = np.max(data_array, axis=1)
-        running_max = np.maximum.accumulate(max_vals)
-        curves.append(running_max)
+        max_vals = np.mean(data_array, axis=1)
+        # running_max = np.maximum.accumulate(max_vals)
+        curves.append(max_vals)
 
     if not curves:
         return
@@ -80,13 +95,8 @@ def make_the_plot(inherit, inherit_type, inherit_pool, environment, ax, learn_me
     q25 = np.percentile(curves, 25, axis=0)
     q75 = np.percentile(curves, 75, axis=0)
 
-    ax.plot(x_vals, mean_vals, label=label, color='blue' if learn_method == 'bo' else 'green' if learn_method == 'ppo' else 'red', linestyle=LINE_STYLES.get(key))
+    ax.plot(x_vals, mean_vals, label=label, color=color, linestyle=LINE_STYLES.get(key))
     ax.fill_between(x_vals, q25, q75, color=color, alpha=0.2)
-
-    # csv_data = {'cat': [LABELS[key] for _ in range(GENERATIONS)], 'x': range(GENERATIONS), 'y': np.mean(curves, axis=0),
-    #             'ymin': np.percentile(curves, 25, axis=0),
-    #             'ymax': np.percentile(curves, 25, axis=0)}
-    # pd.DataFrame(csv_data).to_csv(f'performance-line-{environment}-{key[1]}-{key[2]}.txt', index=False, sep='\t')
 
 
 def main():
@@ -104,16 +114,16 @@ def main():
         "lines.linewidth": 2.2
     })
 
-    environments = ['simple', 'carry']
+    environments = ['bidirectional', 'simple', 'random']
     strategy_keys = list(LABELS.keys())  # 6 total strategies
 
-    fig, axes = plt.subplots(nrows=2, figsize=(10, 10), sharey=False)
+    fig, axes = plt.subplots(nrows=max(2, len(environments)), figsize=(10, 10), sharey=False)
     fig.subplots_adjust(top=0.85, right=0.78)  # Make space for legend
 
     for i, env in enumerate(environments):
         ax = axes[i]
         for idx, key in enumerate(strategy_keys):
-            for learn_method in ['bo', 'ddpg', 'ppo']:
+            for learn_method in ['bo', 'ppo', 'ddpg']:
                 make_the_plot(*key, env, ax, learn_method)
 
         ax.set_title(f"Environment: {env.capitalize()}", weight='bold', pad=15)
