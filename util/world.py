@@ -146,7 +146,7 @@ def add_extra_attributes(world, rng):
     return world
 
 def calculate_objective_value(start_position, end_position, extra_metrics, generation_index):
-    if config.ENVIRONMENT in ['simple', 'rugged', 'step', 'random']:
+    if config.ENVIRONMENT in ['simple', 'rugged', 'steps', 'random']:
         return np.mean(end_position[0]) - np.mean(start_position[0])
     elif config.ENVIRONMENT == 'bidirectional':
         if generation_index % 2 == 0:
@@ -164,7 +164,7 @@ def calculate_objective_value(start_position, end_position, extra_metrics, gener
         raise ValueError(f"Environment {config.ENVIRONMENT} does not exist.")
 
 def calculate_reward(start_position, end_position, extra_metrics, generation_index):
-    if config.ENVIRONMENT in ['simple', 'rugged', 'step', 'random', 'bidirectional', 'climb']:
+    if config.ENVIRONMENT in ['simple', 'rugged', 'steps', 'random', 'bidirectional', 'climb']:
         return calculate_objective_value(start_position, end_position, extra_metrics, generation_index)
     elif config.ENVIRONMENT == 'jump':
         return np.mean(end_position[1]) - np.mean(start_position[1])

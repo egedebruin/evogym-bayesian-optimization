@@ -86,14 +86,14 @@ def learn(individual, rng):
 			controller_values = brain.next_point_to_controller_values(next_point, actuator_indices)
 			args = {k: torch.nn.Parameter(torch.tensor(v, dtype=torch.float32))
 				for k, v in controller_values.items()}
-		elif config.LEARN_METHOD == TYPE_DDPG or config.LEARN_METHOD == TYPE_PPO and iteration == 0:
+		elif (config.LEARN_METHOD == TYPE_DDPG or config.LEARN_METHOD == TYPE_PPO) and iteration == 0:
 			# First iteration
 			rl_agent.set_update_networks(True, True)
 			controller_values = brain.next_point_to_controller_values(next_point, actuator_indices)
 			args = {k: torch.nn.Parameter(torch.tensor(v, dtype=torch.float32))
 					for k, v in controller_values.items()}
 			rl_agent.set_policy_optimizer(args, rl_agent.policy_lr)
-		elif config.LEARN_METHOD == TYPE_DDPG or config.LEARN_METHOD == TYPE_PPO and iteration + 1 == config.LEARN_ITERATIONS:
+		elif (config.LEARN_METHOD == TYPE_DDPG or config.LEARN_METHOD == TYPE_PPO) and iteration + 1 == config.LEARN_ITERATIONS:
 			# Last iteration
 			rl_agent.set_update_networks(False, False)
 			controller_values = brain.next_point_to_controller_values(best_brain, actuator_indices)
