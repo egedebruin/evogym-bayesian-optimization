@@ -90,6 +90,11 @@ class BrainSine(Brain):
         return args
 
     @staticmethod
+    def controller_values_to_next_point(controller_values):
+        raise NotImplementedError
+
+
+    @staticmethod
     def sin_cos_to_angle(sin_val, cos_val):
         angle = np.arctan2(sin_val, cos_val)
         if angle < 0:

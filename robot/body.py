@@ -32,6 +32,10 @@ class Body:
         return grid_size
 
     def mutate(self, rng: np.random.Generator):
+        nothing_mutation = config.NOTHING_MUTATION_CHANGING_ENVIRONMENT if config.ENVIRONMENT in ['bidirectional', 'catch', 'random'] else config.NOTHING_MUTATION
+        if rng.random() < nothing_mutation:
+            return
+
         success = False
         while not success:
             choice = rng.random()
