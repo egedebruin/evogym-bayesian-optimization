@@ -1,6 +1,5 @@
 import json
 import uuid
-from unicodedata import bidirectional
 
 import numpy as np
 import os
@@ -90,12 +89,12 @@ def run_simulator(sim, controller, sensors, viewer, simulator_length, headless, 
 def start_position_robot():
     if config.ENVIRONMENT == 'catch':
         return 16, 1
-    if config.ENVIRONMENT == 'bidirectional':
+    if config.ENVIRONMENT in ['bidirectional', 'bidirectional2']:
         return 100, 1
     return 1, 1
 
 def get_environment(rng):
-    if config.ENVIRONMENT == 'simple' or config.ENVIRONMENT == 'jump' or config.ENVIRONMENT == 'catch' or config.ENVIRONMENT == 'bidirectional':
+    if config.ENVIRONMENT in ['simple', 'jump', 'catch', 'bidirectional', 'bidirectional2']:
         world = EvoWorld.from_json(os.path.join('worlds', 'simple_environment.json'))
     elif config.ENVIRONMENT == 'climb':
         world = EvoWorld.from_json(os.path.join('worlds', 'climb_environment.json'))
@@ -106,12 +105,15 @@ def get_environment(rng):
     elif config.ENVIRONMENT == 'steps':
         world = EvoWorld.from_json(os.path.join('worlds', 'steps_environment.json'))
     elif config.ENVIRONMENT == 'random':
-        filename = str(uuid.uuid4())
         contents = random_environment_creator.make(rng)
-        with open(f'worlds/random/{filename}.json', 'w') as outfile:
+        filename = f'{str(uuid.uuid4())}.json'
+        directory = f'worlds/random/'
+        if not os.path.exists(directory):
+            os.makedirs(directory)
+        with open(directory + filename, 'w') as outfile:
             json.dump(contents, outfile, indent=4)
-        world = EvoWorld.from_json(os.path.join('worlds', 'random', f'{filename}.json'))
-        os.remove(f'worlds/random/{filename}.json')
+        world = EvoWorld.from_json(directory + filename)
+        os.remove(directory + filename)
     else:
         raise ValueError(f"Environment {config.ENVIRONMENT} does not exist.")
     return world
@@ -148,7 +150,7 @@ def add_extra_attributes(world, rng):
 def calculate_objective_value(start_position, end_position, extra_metrics, generation_index):
     if config.ENVIRONMENT in ['simple', 'rugged', 'steps', 'random']:
         return np.mean(end_position[0]) - np.mean(start_position[0])
-    elif config.ENVIRONMENT == 'bidirectional':
+    elif config.ENVIRONMENT in ['bidirectional', 'bidirectional2']:
         if generation_index % 2 == 0:
             return np.mean(end_position[0]) - np.mean(start_position[0])
         return np.mean(start_position[0]) - np.mean(end_position[0])
@@ -164,7 +166,7 @@ def calculate_objective_value(start_position, end_position, extra_metrics, gener
         raise ValueError(f"Environment {config.ENVIRONMENT} does not exist.")
 
 def calculate_reward(start_position, end_position, extra_metrics, generation_index):
-    if config.ENVIRONMENT in ['simple', 'rugged', 'steps', 'random', 'bidirectional', 'climb']:
+    if config.ENVIRONMENT in ['simple', 'rugged', 'steps', 'random', 'bidirectional', 'bidirectional2', 'climb']:
         return calculate_objective_value(start_position, end_position, extra_metrics, generation_index)
     elif config.ENVIRONMENT == 'jump':
         return np.mean(end_position[1]) - np.mean(start_position[1])
