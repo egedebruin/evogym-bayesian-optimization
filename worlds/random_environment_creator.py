@@ -3,16 +3,18 @@ def make(rng):
     types = []
     neighbours = {}
     height = 0
+    previous_choice = 0
     for i in range(100):
-        if i < 6:
+        if i < 11:
             height = 1
         else:
             choices = [0]
-            if height > 1:
+            if height > 1 and previous_choice == 0:
                 choices.append(-1)
-            if height < 10:
+            if height < 10 and previous_choice == 0:
                 choices.append(1)
-            height += rng.choice(choices)
+            previous_choice = rng.choice(choices)
+            height += previous_choice
 
         for j in range(height):
             current = i + j * 100
