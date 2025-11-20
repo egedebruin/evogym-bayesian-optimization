@@ -10,8 +10,10 @@ from configs import config
 from worlds import random_environment_creator
 
 
-def build_world(robot_structure, rng):
-    world = get_environment(rng)
+def build_world(robot_structure, rng=None, world=None):
+    if world is None:
+        world = get_environment(rng)
+        world = add_extra_attributes(world, rng)
     x, y = start_position_robot()
     world.add_from_array(
         name='robot',
@@ -20,8 +22,6 @@ def build_world(robot_structure, rng):
         y=y,
         connections=utils.get_full_connectivity(robot_structure)
     )
-
-    world = add_extra_attributes(world, rng)
     EvoSim._has_displayed_version = True
     sim = EvoSim(world)
     viewer = EvoViewer(sim)

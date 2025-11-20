@@ -20,25 +20,29 @@ from util.logger_setup import logger
 TYPE_DDPG = 'ddpg'
 TYPE_PPO = 'ppo'
 TYPE_BO = 'bo'
+RL_TYPES = [TYPE_DDPG, TYPE_PPO]
 
 
 def learn_individuals(individuals, rng):
+	current_world = world.get_environment(rng)
+	current_world = world.add_extra_attributes(current_world, rng)
+
 	with concurrent.futures.ProcessPoolExecutor(
 			max_workers=config.PARALLEL_PROCESSES
 	) as executor:
 		futures = []
 		for individual in individuals:
-			futures.append(executor.submit(learn, individual, rng))
+			futures.append(executor.submit(learn, individual, rng, current_world))
 
 	result = []
 	for future in futures:
 		result.append(future.result())
 	return result
 
-def learn(individual, rng):
+def learn(individual, rng, current_world):
 	robot_body = individual.body
 	brain = individual.brain
-	sim, viewer = world.build_world(robot_body.grid, rng)
+	sim, viewer = world.build_world(robot_body.grid, world=current_world)
 	try:
 		actuator_indices = sim.get_actuator_indices('robot')
 	except ValueError:
@@ -86,23 +90,23 @@ def learn(individual, rng):
 			controller_values = brain.next_point_to_controller_values(next_point, actuator_indices)
 			args = {k: torch.nn.Parameter(torch.tensor(v, dtype=torch.float32))
 				for k, v in controller_values.items()}
-		elif config.LEARN_METHOD in [TYPE_DDPG, TYPE_PPO] and iteration == 0:
+		elif config.LEARN_METHOD in RL_TYPES and iteration == 0:
 			# First iteration
 			rl_agent.set_update_networks(True, True)
 			controller_values = brain.next_point_to_controller_values(next_point, actuator_indices)
 			args = {k: torch.nn.Parameter(torch.tensor(v, dtype=torch.float32))
 					for k, v in controller_values.items()}
 			rl_agent.set_policy_optimizer(args, rl_agent.policy_lr)
-		elif config.LEARN_METHOD in [TYPE_DDPG, TYPE_PPO] and iteration + 1 == config.LEARN_ITERATIONS:
+		elif config.LEARN_METHOD in RL_TYPES and iteration + 1 == config.LEARN_ITERATIONS:
 			# Last iteration
 			rl_agent.set_update_networks(False, False)
 			controller_values = brain.next_point_to_controller_values(best_brain, actuator_indices)
 			args = {k: torch.nn.Parameter(torch.tensor(v, dtype=torch.float32))
 					for k, v in controller_values.items()}
 			next_point = best_brain
-		elif config.LEARN_METHOD in [TYPE_DDPG, TYPE_PPO]:
+		elif config.LEARN_METHOD in RL_TYPES:
 			# Intermediate iteration
-			if iteration % config.RL_EVALUATIONS_FREQUENCY == config.RL_EVALUATIONS_FREQUENCY - 1:
+			if config.LEARN_METHOD == TYPE_PPO and iteration % config.RL_EVALUATIONS_FREQUENCY == config.RL_EVALUATIONS_FREQUENCY - 1:
 				rl_agent.set_update_networks(False, False)
 			else:
 				rl_agent.set_update_networks(True, True)
