@@ -28,6 +28,7 @@ def read_args():
 	config.INHERIT_TYPE = args.inherit_type
 	config.SOCIAL_POOL = args.social_pool
 	config.LEARN_METHOD = args.learn_method
+	config.WRITE_RANDOM_ENV = True
 
 	extra = ''
 	if args.inherit_alpha:

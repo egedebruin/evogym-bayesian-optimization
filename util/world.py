@@ -7,6 +7,7 @@ import os
 from evogym import EvoWorld, EvoSim, EvoViewer, utils, WorldObject
 
 from configs import config
+from util import writer
 from worlds import random_environment_creator
 
 
@@ -105,7 +106,11 @@ def get_environment(rng):
     elif config.ENVIRONMENT == 'steps':
         world = EvoWorld.from_json(os.path.join('worlds', 'steps_environment.json'))
     elif config.ENVIRONMENT == 'random':
-        contents = random_environment_creator.make(rng)
+        contents, heights = random_environment_creator.make(rng)
+
+        if config.WRITE_RANDOM_ENV:
+            writer.write_to_environments_file(";".join(str(e) for e in heights))
+
         filename = f'{str(uuid.uuid4())}.json'
         directory = f'worlds/random/'
         if not os.path.exists(directory):
@@ -129,6 +134,9 @@ def add_extra_attributes(world, rng):
     if config.ENVIRONMENT == 'catch':
         offset_x = int(rng.integers(-6, 5)) # NOTE: This is always the same per generation
         offset_y = int(rng.integers(0, 6))
+
+        if config.WRITE_RANDOM_ENV:
+            writer.write_to_environments_file(f'{str(offset_x)};{str(offset_y)}')
 
         package = WorldObject.from_json(os.path.join('worlds', 'package.json'))
         package.set_pos(10 + offset_x, 41 + offset_y)

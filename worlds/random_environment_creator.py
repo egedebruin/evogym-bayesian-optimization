@@ -1,4 +1,5 @@
 def make(rng):
+    heights = []
     indices = []
     types = []
     neighbours = {}
@@ -16,6 +17,7 @@ def make(rng):
             previous_choice = rng.choice(choices)
             height += previous_choice
 
+        heights.append(height)
         for j in range(height):
             current = i + j * 100
             down = current - 100
@@ -45,4 +47,4 @@ def make(rng):
             }
         }
     }
-    return contents
+    return contents, heights
