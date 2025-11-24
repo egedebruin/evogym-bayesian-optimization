@@ -18,16 +18,16 @@ from util import restart_population, writer, start
 import learn
 from util.logger_setup import logger, logger_setup
 
-def run_generation(individuals, rng):
+def run_generation(individuals, heights, rng):
 	new_population = []
-	results = learn.learn_individuals(individuals, rng)
+	results, new_heights = learn.learn_individuals(individuals, heights, rng)
 	i = 0
 	for (objective_value, best_brain, experience, best_inherited_objective_value, individual) in results:
 		individual.add_evaluation(objective_value, best_brain, experience, best_inherited_objective_value)
 		new_population.append(individual)
 		writer.write_to_individuals_file(individual)
 		i += 1
-	return new_population
+	return new_population, new_heights
 
 def get_offspring(population, generation_index, parent_selection, rng:np.random.Generator):
 	selected_individuals = parent_selection.select(population, rng)
@@ -57,11 +57,14 @@ def main():
 	logger_setup()
 	set_number_of_sensors()
 
+	heights = []
 	if os.path.exists(config.FOLDER + "populations.txt"):
 		logger.info("Restarting populations...")
 		population, num_generations = restart_population.get_population()
 		rng = restart_population.get_rng()
 		logger.info("Restart succeeded")
+		logger.error("Restart is not working due to: Heights, ...")
+		exit()
 	else:
 		logger.info(f"Generation 0")
 		rng = start.make_rng_seed()
@@ -75,7 +78,7 @@ def main():
 			individual = Individual(individual_id, body, brain, 0, [])
 			individuals.append(individual)
 
-		population = run_generation(individuals, rng)
+		population, heights = run_generation(individuals, heights, rng)
 		writer.write_to_populations_file(population)
 		writer.write_to_rng_file(rng)
 
@@ -88,7 +91,8 @@ def main():
 			continue
 		logger.info(f"Generation {generation_index}/{number_of_generations}")
 		offspring = get_offspring(population, generation_index, parent_selection, rng)
-		population += run_generation(offspring, rng)
+		evaluated_offspring, heights = run_generation(offspring, heights, rng)
+		population += evaluated_offspring
 		population = survivor_selection.select(population, rng)
 		writer.write_to_populations_file(population)
 		writer.write_to_rng_file(rng)

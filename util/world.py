@@ -13,7 +13,7 @@ from worlds import random_environment_creator
 
 def build_world(robot_structure, rng=None, world=None):
     if world is None:
-        world = get_environment(rng)
+        world, _ = get_environment(rng)
         world = add_extra_attributes(world, rng)
     x, y = start_position_robot()
     world.add_from_array(
@@ -94,7 +94,8 @@ def start_position_robot():
         return 100, 1
     return 1, 1
 
-def get_environment(rng):
+def get_environment(rng, previous_heights=None):
+    heights = []
     if config.ENVIRONMENT in ['simple', 'jump', 'catch', 'bidirectional', 'bidirectional2']:
         world = EvoWorld.from_json(os.path.join('worlds', 'simple_environment.json'))
     elif config.ENVIRONMENT == 'climb':
@@ -105,8 +106,11 @@ def get_environment(rng):
         world = EvoWorld.from_json(os.path.join('worlds', 'rugged_environment.json'))
     elif config.ENVIRONMENT == 'steps':
         world = EvoWorld.from_json(os.path.join('worlds', 'steps_environment.json'))
-    elif config.ENVIRONMENT == 'random':
-        contents, heights = random_environment_creator.make(rng)
+    elif config.ENVIRONMENT in ['random', 'changing']:
+        if config.ENVIRONMENT == 'random' or previous_heights is None or len(previous_heights) == 0:
+            contents, heights = random_environment_creator.make(rng)
+        else:
+            contents, heights = random_environment_creator.change(rng, previous_heights)
 
         if config.WRITE_RANDOM_ENV:
             writer.write_to_environments_file(";".join(str(e) for e in heights))
@@ -121,14 +125,14 @@ def get_environment(rng):
         os.remove(directory + filename)
     else:
         raise ValueError(f"Environment {config.ENVIRONMENT} does not exist.")
-    return world
+    return world, heights
 
 
 def tracker(viewer):
-    if config.ENVIRONMENT == 'carry' or config.ENVIRONMENT == 'catch':
+    if config.ENVIRONMENT in ['carry', 'catch']:
         viewer.track_objects('package', 'robot')
     else:
-        viewer.track_objects('robot')
+        viewer.track_objects('ground')
 
 def add_extra_attributes(world, rng):
     if config.ENVIRONMENT == 'catch':
@@ -156,7 +160,7 @@ def add_extra_attributes(world, rng):
     return world
 
 def calculate_objective_value(start_position, end_position, extra_metrics, generation_index):
-    if config.ENVIRONMENT in ['simple', 'rugged', 'steps', 'random']:
+    if config.ENVIRONMENT in ['simple', 'rugged', 'steps', 'random', 'changing']:
         return np.mean(end_position[0]) - np.mean(start_position[0])
     elif config.ENVIRONMENT in ['bidirectional', 'bidirectional2']:
         if generation_index % 2 == 0:
@@ -174,7 +178,7 @@ def calculate_objective_value(start_position, end_position, extra_metrics, gener
         raise ValueError(f"Environment {config.ENVIRONMENT} does not exist.")
 
 def calculate_reward(start_position, end_position, extra_metrics, generation_index):
-    if config.ENVIRONMENT in ['simple', 'rugged', 'steps', 'random', 'bidirectional', 'bidirectional2', 'climb']:
+    if config.ENVIRONMENT in ['simple', 'rugged', 'steps', 'random', 'bidirectional', 'bidirectional2', 'climb', 'changing']:
         return calculate_objective_value(start_position, end_position, extra_metrics, generation_index)
     elif config.ENVIRONMENT == 'jump':
         return np.mean(end_position[1]) - np.mean(start_position[1])
@@ -192,7 +196,7 @@ def calculate_reward(start_position, end_position, extra_metrics, generation_ind
         raise ValueError(f"Environment {config.ENVIRONMENT} does not exist.")
 
 def extra_metrics_for_objective_value(timing, sim, extra):
-    if config.ENVIRONMENT == 'carry' or config.ENVIRONMENT == 'catch':
+    if config.ENVIRONMENT in ['carry', 'catch']:
         if timing == 'before' or timing == 'after':
             extra.append(sim.object_pos_at_time(sim.get_time(), 'package'))
 

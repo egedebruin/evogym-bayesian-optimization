@@ -23,8 +23,8 @@ TYPE_BO = 'bo'
 RL_TYPES = [TYPE_DDPG, TYPE_PPO]
 
 
-def learn_individuals(individuals, rng):
-	current_world = world.get_environment(rng)
+def learn_individuals(individuals, heights, rng):
+	current_world, new_heights = world.get_environment(rng, heights)
 	current_world = world.add_extra_attributes(current_world, rng)
 
 	with concurrent.futures.ProcessPoolExecutor(
@@ -37,7 +37,7 @@ def learn_individuals(individuals, rng):
 	result = []
 	for future in futures:
 		result.append(future.result())
-	return result
+	return result, new_heights
 
 def learn(individual, rng, current_world):
 	robot_body = individual.body
@@ -121,7 +121,7 @@ def learn(individual, rng, current_world):
 
 		sensors = Sensors(robot_body.grid)
 
-		result = world.run_simulator(sim, controller, sensors, viewer, config.SIMULATION_LENGTH, True, individual.original_generation, transition_buffer)
+		result = world.run_simulator(sim, controller, sensors, viewer, config.SIMULATION_LENGTH, False, individual.original_generation, transition_buffer)
 		if result > objective_value:
 			objective_value = result
 			best_brain = next_point
