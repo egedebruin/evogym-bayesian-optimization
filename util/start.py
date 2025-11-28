@@ -20,6 +20,7 @@ def read_args():
 	parser.add_argument('--kappa', help='Kappa for UCB', required=False, type=float)
 	parser.add_argument('--random-learn', help='Learn only with random controllers', required=False, type=int)
 	parser.add_argument('--bo-restarts', help='Number of restarts for the BO sample finder', required=False, type=int)
+	parser.add_argument('--change-prob', help='Changing probability per block in changing environment', required=False, type=float)
 
 	args = parser.parse_args()
 	config.LEARN_ITERATIONS = args.learn
@@ -40,6 +41,9 @@ def read_args():
 	if args.random_learn:
 		config.RANDOM_LEARNING = args.random_learn == 1
 		extra += "_random-" + str(args.random_learn)
+	if args.change_prob:
+		config.CHANGE_PROB = args.change_prob
+		extra += "_changing-" + str(args.change_prob)
 	if args.bo_restarts:
 		config.BO_RESTARTS = args.bo_restarts
 	else:
