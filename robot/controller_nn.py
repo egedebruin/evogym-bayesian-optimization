@@ -24,9 +24,9 @@ class ControllerNN(Controller):
 
         self.rl_agent = None
         self.velocity_indices = list(range(9, 27))
-        self.velocity_norm = RunningNorm(0.0, 100.0, 'linear')
+        self.velocity_norm = RunningNorm(0.0, 100.0, 'tanh')
         self.package_indices = list(range(30, 32))
-        self.package_norm = RunningNorm(0.0, 1.0, 'tanh', scale=10)
+        self.package_norm = RunningNorm(0.0, 1.0, 'tanh')
 
     def set_rl_agent(self, rl_agent):
         self.rl_agent = rl_agent

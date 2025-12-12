@@ -1,11 +1,10 @@
 import numpy as np
 
 class RunningNorm:
-    def __init__(self, mean, var, mode, scale=1.0):
+    def __init__(self, mean, var, mode):
         self.mean = mean
         self.var = var
         self.mode = mode  # 'linear' or 'tanh'
-        self.scale = scale
 
     def normalize(self, x, mask=None):
         """
@@ -23,6 +22,6 @@ class RunningNorm:
         if self.mode == 'linear':
             return x_norm
         elif self.mode == 'tanh':
-            return np.tanh(x_norm / self.scale)
+            return np.tanh(x_norm)
         else:
             raise ValueError(f"Unknown mode: {self.mode}")
