@@ -1,6 +1,7 @@
 import numpy as np
 
 from configs import config
+from configs.config import MIN_DELETE_MUTATION
 
 
 class Body:
@@ -32,25 +33,21 @@ class Body:
         return grid_size
 
     def mutate(self, rng: np.random.Generator):
-        nothing_mutation = config.NOTHING_MUTATION_CHANGING_ENVIRONMENT if config.ENVIRONMENT in ['bidirectional', 'catch', 'random', 'changing'] else config.NOTHING_MUTATION
-        if rng.random() < nothing_mutation:
-            return
-
         success = False
         while not success:
             choice = rng.random()
             if choice < 1/3:
-                number_of_additions = rng.integers(1, config.MAX_ADD_MUTATION + 1)
+                number_of_additions = rng.integers(config.MIN_MUTATION, config.MAX_MUTATION + 1)
                 if self.grid_size() + number_of_additions <= config.MAX_SIZE:
                     for _ in range(number_of_additions):
                         self.add_mutation(rng)
                     success = True
             elif choice < 2/3:
-                for _ in range(rng.integers(1, config.MAX_CHANGE_MUTATION + 1)):
+                for _ in range(rng.integers(config.MIN_MUTATION, config.MAX_MUTATION + 1)):
                     self.change_mutation(rng)
                 success = True
             else:
-                number_of_deletions = rng.integers(1, config.MAX_DELETE_MUTATION + 1)
+                number_of_deletions = rng.integers(config.MIN_MUTATION, config.MAX_MUTATION + 1)
                 if self.grid_size() - number_of_deletions >= config.MIN_SIZE:
                     for _ in range(number_of_deletions):
                         self.delete_mutation(rng)

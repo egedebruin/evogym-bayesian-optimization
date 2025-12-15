@@ -46,10 +46,9 @@ def read_args():
 		config.CHANGE_PROB = args.change_prob
 		extra += "_changing-" + str(args.change_prob)
 	if args.mutation:
-		config.MAX_ADD_MUTATION = args.mutation
-		config.MAX_CHANGE_MUTATION = args.mutation
-		config.MAX_DELETE_MUTATION = args.mutation
-		config.NOTHING_MUTATION_CHANGING_ENVIRONMENT = 1 / (args.mutation + 1)
+		min_mutation = max(0, args.mutation - 3)
+		config.MIN_MUTATION = min_mutation
+		config.MAX_MUTATION = args.mutation
 		extra += "_mutation-" + str(args.mutation)
 	if args.bo_restarts:
 		config.BO_RESTARTS = args.bo_restarts
