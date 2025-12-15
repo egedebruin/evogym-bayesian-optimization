@@ -1,8 +1,6 @@
 import numpy as np
 
 from configs import config
-from configs.config import MIN_DELETE_MUTATION
-
 
 class Body:
     grid: np.array
