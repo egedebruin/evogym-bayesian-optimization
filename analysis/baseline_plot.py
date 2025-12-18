@@ -7,7 +7,7 @@ import plot
 
 # Constants
 POP_SIZE = 100
-EVALS_PER_GEN = 1
+EVALS_PER_GEN = 50
 REPETITIONS = 5
 SUB_FOLDER = 'changing-morphology'
 
@@ -69,10 +69,10 @@ def make_the_plot(inherit, inherit_type, inherit_pool, environment, ax, learn_me
             out[i] = np.mean(x[start:end])
         return out
 
-    extra = "_changing-0.5"
-    extra += "_mutation-3"
+    extra = "_changing-1e-07"
+    extra += f"_mutation-{environment}"
 
-    GENERATIONS = 100000
+    GENERATIONS = 100
     key = (inherit, inherit_type, inherit_pool)
     # label = LABELS.get(key)
     # color = COLORS.get(key)
@@ -84,7 +84,7 @@ def make_the_plot(inherit, inherit_type, inherit_pool, environment, ax, learn_me
 
     curves = []
     for repetition in range(1, REPETITIONS + 1):
-        data_path = f'results/{SUB_FOLDER}/learn-{EVALS_PER_GEN}_inherit-{inherit}_type-{inherit_type}_pool-{inherit_pool}_environment-{environment}_method-{learn_method}{extra}_repetition-{repetition}'
+        data_path = f'results/{SUB_FOLDER}/learn-{EVALS_PER_GEN}_inherit-{inherit}_type-{inherit_type}_pool-{inherit_pool}_environment-changing_method-{learn_method}{extra}_repetition-{repetition}'
         data_array = plot.get_data(data_path, GENERATIONS)
 
         if data_array is None:
@@ -134,7 +134,7 @@ def main():
         "lines.linewidth": 2.2
     })
 
-    environments = ['changing', 'bidirectional', 'bidirectional2']
+    environments = ['1', '2', '3', '5']
     strategy_keys = list(LABELS.keys())  # 6 total strategies
 
     fig, axes = plt.subplots(nrows=max(2, len(environments)), figsize=(10, 10), sharey=False)
