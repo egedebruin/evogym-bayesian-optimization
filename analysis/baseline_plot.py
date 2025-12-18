@@ -3,19 +3,20 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
 from matplotlib import rcParams
-import plot  # Assumes you have a module `plot` with `get_data`
+import plot
 
 # Constants
-POP_SIZE = 200
-EVALS_PER_GEN = 50
-REPETITIONS = 3
-SUB_FOLDER = 'longer-changing'
+POP_SIZE = 100
+EVALS_PER_GEN = 1
+REPETITIONS = 5
+SUB_FOLDER = 'changing-morphology'
 
 LABELS = {
-    (-1, 'none', 0): 'Individual',
+    (-1, 'none', 0): 'Darwinian',
     (8, 'best', 1): 'Best - N=1',
     (8, 'best', 8): 'Best - N=8',
-    (1, 'parent', 1): 'Parent',
+    (1, 'parent', 1): 'Lamarckian 1',
+    (8, 'parent', 1): 'Lamarckian 8',
     (8, 'random', 1): 'Random - N=1',
     (8, 'random', 8): 'Random - N=8',
     (8, 'similar', 1): 'Similar - N=1',
@@ -34,10 +35,11 @@ COLORS = {
 }
 
 LINE_STYLES = {
-    (-1, 'none', 0): '--',
+    (-1, 'none', 0): '-',
     (8, 'best', 1): ':',
     (8, 'best', 8): ':',
-    (1, 'parent', 1): '-.',
+    (1, 'parent', 1): '--',
+    (8, 'parent', 1): ':',
     (8, 'random', 1): '-.',
     (8, 'random', 8): '-.',
     (8, 'similar', 1): (0, (3, 1, 1, 1)),
@@ -58,11 +60,23 @@ LEARN_METHOD_TO_COLOR = {
 
 
 def make_the_plot(inherit, inherit_type, inherit_pool, environment, ax, learn_method):
-    GENERATIONS = 30
+    def smooth(x, w):
+        out = np.zeros_like(x, dtype=float)
+        half = w // 2
+        for i in range(len(x)):
+            start = max(0, i - half)
+            end = min(len(x), i + half + 1)
+            out[i] = np.mean(x[start:end])
+        return out
+
+    extra = "_changing-0.5"
+    extra += "_mutation-3"
+
+    GENERATIONS = 100000
     key = (inherit, inherit_type, inherit_pool)
     # label = LABELS.get(key)
     # color = COLORS.get(key)
-    label = LEARN_METHOD_TO_LABEL.get(learn_method)
+    label = f'{LEARN_METHOD_TO_LABEL.get(learn_method)}, {LABELS.get(key)}'
     color = LEARN_METHOD_TO_COLOR.get(learn_method)
 
     if label is None or color is None:
@@ -70,7 +84,7 @@ def make_the_plot(inherit, inherit_type, inherit_pool, environment, ax, learn_me
 
     curves = []
     for repetition in range(1, REPETITIONS + 1):
-        data_path = f'results/{SUB_FOLDER}/learn-{EVALS_PER_GEN}_inherit-{inherit}_type-{inherit_type}_pool-{inherit_pool}_environment-{environment}_method-{learn_method}_repetition-{repetition}'
+        data_path = f'results/{SUB_FOLDER}/learn-{EVALS_PER_GEN}_inherit-{inherit}_type-{inherit_type}_pool-{inherit_pool}_environment-{environment}_method-{learn_method}{extra}_repetition-{repetition}'
         data_array = plot.get_data(data_path, GENERATIONS)
 
         if data_array is None:
@@ -82,7 +96,7 @@ def make_the_plot(inherit, inherit_type, inherit_pool, environment, ax, learn_me
             continue
 
         max_vals = np.mean(data_array, axis=1)
-        # running_max = np.maximum.accumulate(max_vals)
+        running_max = np.maximum.accumulate(max_vals)
         curves.append(max_vals)
 
     if not curves:
@@ -92,8 +106,14 @@ def make_the_plot(inherit, inherit_type, inherit_pool, environment, ax, learn_me
     curves = np.array(curves)
 
     mean_vals = np.mean(curves, axis=0)
-    q25 = np.percentile(curves, 25, axis=0)
-    q75 = np.percentile(curves, 75, axis=0)
+    q25 = np.percentile(curves, 0, axis=0)
+    q75 = np.percentile(curves, 100, axis=0)
+
+    window = 2
+
+    mean_vals = smooth(mean_vals, window)
+    q25 = smooth(q25, window)
+    q75 = smooth(q75, window)
 
     ax.plot(x_vals, mean_vals, label=label, color=color, linestyle=LINE_STYLES.get(key))
     ax.fill_between(x_vals, q25, q75, color=color, alpha=0.2)
@@ -114,7 +134,7 @@ def main():
         "lines.linewidth": 2.2
     })
 
-    environments = ['bidirectional', 'simple', 'random']
+    environments = ['changing', 'bidirectional', 'bidirectional2']
     strategy_keys = list(LABELS.keys())  # 6 total strategies
 
     fig, axes = plt.subplots(nrows=max(2, len(environments)), figsize=(10, 10), sharey=False)
@@ -123,10 +143,14 @@ def main():
     for i, env in enumerate(environments):
         ax = axes[i]
         for idx, key in enumerate(strategy_keys):
-            for learn_method in ['bo', 'ppo', 'ddpg']:
+            for learn_method in ['ddpg', 'bo']:
                 make_the_plot(*key, env, ax, learn_method)
-
-        ax.set_title(f"Environment: {env.capitalize()}", weight='bold', pad=15)
+        name = 'Changing-0' if env == 'changing-1e-07' else (
+            'Bidirectional with direction sensor' if env == 'bidirectional2' else (
+            'Bidirectional without direction sensor' if env == 'bidirectional' else env.capitalize()
+            )
+        )
+        ax.set_title(f"Environment: {name}", weight='bold', pad=15)
         ax.set_xlabel("Evaluations")
         if i == 0:
             ax.set_ylabel("Fitness")
@@ -136,8 +160,8 @@ def main():
     fig.legend(handles, labels, loc='center right', title="Strategy", frameon=False)
 
     plt.tight_layout(rect=[0, 0, 0.75, 1])  # Leave room for legend
-    plt.show()
-    # plt.savefig(f'plot.pdf')
+    # plt.show()
+    plt.savefig(f'plot.pdf')
 
 
 if __name__ == '__main__':
