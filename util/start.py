@@ -21,7 +21,8 @@ def read_args():
 	parser.add_argument('--random-learn', help='Learn only with random controllers', required=False, type=int)
 	parser.add_argument('--bo-restarts', help='Number of restarts for the BO sample finder', required=False, type=int)
 	parser.add_argument('--change-prob', help='Changing probability per block in changing environment', required=False, type=float)
-	parser.add_argument('--mutation', help='Morphology mutation maximum', required=False, type=int)
+	parser.add_argument('--min-mutation', help='Morphology mutation minimum', required=False, type=int)
+	parser.add_argument('--max-mutation', help='Morphology mutation maximum', required=False, type=int)
 
 	args = parser.parse_args()
 	config.LEARN_ITERATIONS = args.learn
@@ -45,11 +46,12 @@ def read_args():
 	if args.change_prob:
 		config.CHANGE_PROB = args.change_prob
 		extra += "_changing-" + str(args.change_prob)
-	if args.mutation:
-		min_mutation = max(0, args.mutation - 3)
-		config.MIN_MUTATION = min_mutation
+	if args.min_mutation:
+		config.MIN_MUTATION = args.min_mutation
+		extra += "_minmutation-" + str(args.mutation)
+	if args.max_mutation:
 		config.MAX_MUTATION = args.mutation
-		extra += "_mutation-" + str(args.mutation)
+		extra += "_maxmutation-" + str(args.mutation)
 	if args.bo_restarts:
 		config.BO_RESTARTS = args.bo_restarts
 	else:
