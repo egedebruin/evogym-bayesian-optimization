@@ -1,5 +1,7 @@
 import os
 
+from util.archive import Archive
+
 # Force single-threaded execution
 os.environ["OMP_NUM_THREADS"] = "1"       # OpenMP
 os.environ["MKL_NUM_THREADS"] = "1"       # Intel MKL
@@ -38,6 +40,16 @@ def get_offspring(population, generation_index, parent_selection, rng:np.random.
 		offspring.append(new_individual)
 	return offspring
 
+def get_offspring_from_archive(archive: Archive, generation_index, rng:np.random.Generator):
+	offspring = []
+	for i in range(config.OFFSPRING_SIZE):
+		parent = archive.receive(rng)
+		new_individual = parent.generate_new_individual(generation_index, i, rng)
+		new_individual.inherit_experience_archive(archive, parent, rng)
+		offspring.append(new_individual)
+	return offspring
+
+
 def calculate_generations():
 	number_of_generations = int(config.FUNCTION_EVALUATIONS / (config.LEARN_ITERATIONS * config.OFFSPRING_SIZE))
 	number_of_generations_initial_population = int(config.POP_SIZE / config.OFFSPRING_SIZE)
@@ -69,6 +81,7 @@ def main():
 		logger.info(f"Generation 0")
 		rng = start.make_rng_seed()
 		num_generations = 0
+		archive = Archive(30)
 		individuals = []
 		for i in range(config.POP_SIZE):
 			body_size = rng.integers(config.MIN_INITIAL_SIZE, config.MAX_INITIAL_SIZE + 1)
@@ -79,22 +92,27 @@ def main():
 			individuals.append(individual)
 
 		population, heights = run_generation(individuals, heights, rng)
-		writer.write_to_populations_file(population)
+		archive.append_population(population)
+		# writer.write_to_populations_file(population)
+		writer.write_to_archive_file(archive)
 		writer.write_to_rng_file(rng)
 
 	number_of_generations = calculate_generations()
 
-	parent_selection = Selection(config.OFFSPRING_SIZE, config.PARENT_SELECTION, {'pool_size': config.PARENT_POOL})
-	survivor_selection = Selection(config.POP_SIZE, config.SURVIVOR_SELECTION)
+	# parent_selection = Selection(config.OFFSPRING_SIZE, config.PARENT_SELECTION, {'pool_size': config.PARENT_POOL})
+	# survivor_selection = Selection(config.POP_SIZE, config.SURVIVOR_SELECTION)
 	for generation_index in range(1, number_of_generations + 1):
 		if generation_index < num_generations:
 			continue
 		logger.info(f"Generation {generation_index}/{number_of_generations}")
-		offspring = get_offspring(population, generation_index, parent_selection, rng)
+		# offspring = get_offspring(population, generation_index, parent_selection, rng)
+		offspring = get_offspring_from_archive(archive, generation_index, rng)
 		evaluated_offspring, heights = run_generation(offspring, heights, rng)
-		population += evaluated_offspring
-		population = survivor_selection.select(population, rng)
-		writer.write_to_populations_file(population)
+		archive.append_population(evaluated_offspring)
+		# population += evaluated_offspring
+		# population = survivor_selection.select(population, rng)
+		# writer.write_to_populations_file(population)
+		writer.write_to_archive_file(archive)
 		writer.write_to_rng_file(rng)
 
 if __name__ == '__main__':

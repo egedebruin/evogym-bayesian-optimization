@@ -70,6 +70,9 @@ class Individual:
         else:
             raise ValueError(f"Unknown INHERIT TYPE: {config.INHERIT_TYPE}")
 
+        self.do_the_inherit(selected_individuals)
+
+    def do_the_inherit(self, selected_individuals):
         pre_sorted_experiences = [
             sorted(ind.experience, key=lambda x: x[1], reverse=True)
             for ind in selected_individuals
@@ -78,8 +81,32 @@ class Individual:
             for j in range(config.SOCIAL_POOL):
                 if pre_sorted_experiences[j][i][0] not in [exp[0] for exp in self.inherited_experience]:
                     self.inherited_experience.append(pre_sorted_experiences[j][i])
-                # TODO: Deal with same-samples-problem
-                # TODO: For now we skip the similar samples and continue, so we do end up with INHERIT_SAMPLES samples to reevaluate
+
+    def inherit_experience_archive(self, archive, parent, rng):
+        self.inherited_experience = []
+        if config.INHERIT_TYPE == 'parent':
+            if config.SOCIAL_POOL != 1:
+                raise ValueError(f"SOCIAL_POOL must be equal to 1")
+
+            selected_individuals = [parent]
+        elif config.INHERIT_TYPE == 'best':
+            selected_individuals = archive.get_best(config.SOCIAL_POOL)
+        elif config.INHERIT_TYPE == 'random':
+            selected_individuals = archive.get_random(config.SOCIAL_POOL, rng)
+        elif config.INHERIT_TYPE == 'similar':
+            if config.SOCIAL_POOL != 1:
+                raise ValueError(f"SOCIAL_POOL must be equal to 1")
+
+            archive_similar = archive.get_most_similar(self)
+            if archive_similar is None:
+                archive_similar = parent
+            selected_individuals = [archive_similar]
+        elif config.INHERIT_TYPE == 'none':
+            return
+        else:
+            raise ValueError(f"Unknown INHERIT TYPE: {config.INHERIT_TYPE}")
+
+        self.do_the_inherit(selected_individuals)
 
     @staticmethod
     def hamming_distance(A, B):
