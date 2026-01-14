@@ -55,7 +55,7 @@ class Individual:
         new_individual.original_generation = generation_index
         return new_individual
 
-    def inherit_experience(self, population, parent, rng):
+    def inherit_experience(self, population, parent, rng, learn_iterations=None):
         self.inherited_experience = []
         if config.INHERIT_TYPE == 'parent':
             selected_individuals = [parent]
@@ -74,7 +74,9 @@ class Individual:
             sorted(ind.experience, key=lambda x: x[1], reverse=True)
             for ind in selected_individuals
         ]
-        for i in range(config.LEARN_ITERATIONS):
+        if learn_iterations is None:
+            learn_iterations = config.LEARN_ITERATIONS
+        for i in range(learn_iterations):
             for j in range(config.SOCIAL_POOL):
                 if pre_sorted_experiences[j][i][0] not in [exp[0] for exp in self.inherited_experience]:
                     self.inherited_experience.append(pre_sorted_experiences[j][i])
