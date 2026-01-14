@@ -34,7 +34,14 @@ class Archive:
             result = self.archive[rng.integers(self.size)][rng.integers(self.size)]
         return result
 
-    def get_most_similar(self, individual: Individual):
+    def get_all_individuals(self):
+        all_individuals = []
+        for row in self.archive:
+            for individual in row:
+                all_individuals.append(individual)
+        return all_individuals
+
+    def get_from_cell(self, individual: Individual):
         first_descriptor = Archive.relative_activity(individual.body.grid)
         second_descriptor = Archive.elongation(individual.body.grid)
 
@@ -43,18 +50,16 @@ class Archive:
 
         return self.archive[first_location][second_location]
 
+    def get_most_similar(self, individual: Individual, amount: int):
+        all_individuals = self.get_all_individuals()
+        return sorted(all_individuals, key=lambda ind: Individual.hamming_distance(individual.body.grid, ind.body.grid))[:amount]
+
     def get_best(self, amount: int):
-        all_individuals = []
-        for row in self.archive:
-            for individual in row:
-                all_individuals.append(individual)
+        all_individuals = self.get_all_individuals()
         return sorted(all_individuals, key=lambda ind: -ind.objective_value)[:amount]
 
     def get_random(self, amount: int, rng):
-        all_individuals = []
-        for row in self.archive:
-            for individual in row:
-                all_individuals.append(individual)
+        all_individuals = self.get_all_individuals()
         return rng.choice(all_individuals, size=amount, replace=False).tolist()
 
     @staticmethod

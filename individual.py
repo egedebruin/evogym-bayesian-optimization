@@ -94,6 +94,8 @@ class Individual:
         elif config.INHERIT_TYPE == 'random':
             selected_individuals = archive.get_random(config.SOCIAL_POOL, rng)
         elif config.INHERIT_TYPE == 'similar':
+            selected_individuals = archive.get_most_similar(config.SOCIAL_POOL, rng)
+        elif config.INHERIT_TYPE == 'cell':
             if config.SOCIAL_POOL != 1:
                 raise ValueError(f"SOCIAL_POOL must be equal to 1")
 
