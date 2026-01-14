@@ -7,6 +7,8 @@ with open("learn_results.pkl", "rb") as f:
 
 # Stack arrays into 2D (rows = arrays, columns = elements)
 for name, arrays in file_data.items():
+    if len(arrays) == 0:
+        continue
     data = np.stack(arrays)
 
     # Compute mean
