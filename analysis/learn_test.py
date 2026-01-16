@@ -87,106 +87,102 @@ def run(rng, grid, parent=None):
 
     return individual
 
-results = {
-    'random' : [],
-    'individual': [],
-    'parent-same': [],
-    'parent-change': []
-}
+for repetition in range(2, 6):
+    results = {}
 
-rng = start.make_rng_seed()
+    rng = start.make_rng_seed()
 
-config.LEARN_ITERATIONS = LEARN_ITS
-for (random_learning, color) in [(False, 'blue'), (True, 'green')]:
-    # BASE
-    config.RANDOM_LEARNING = random_learning
-    config.INHERIT_SAMPLES = -1
-    config.SOCIAL_POOL = 0
-    config.INHERIT_TYPE = 'none'
+    config.LEARN_ITERATIONS = LEARN_ITS
+    for random_learning in [False, True]:
+        # BASE
+        config.RANDOM_LEARNING = random_learning
+        config.INHERIT_SAMPLES = -1
+        config.SOCIAL_POOL = 0
+        config.INHERIT_TYPE = 'none'
 
-    with concurrent.futures.ProcessPoolExecutor(
-            max_workers=8
-    ) as executor:
-        futures = []
-        for grid in grids:
-            futures.append(executor.submit(run, rng, grid))
-    original_individuals = []
-    for future in futures:
-        original_individuals.append(future.result())
+        with concurrent.futures.ProcessPoolExecutor(
+                max_workers=8
+        ) as executor:
+            futures = []
+            for grid in grids:
+                futures.append(executor.submit(run, rng, grid))
+        original_individuals = []
+        for future in futures:
+            original_individuals.append(future.result())
 
-    if not random_learning:
-        results['individual'] = [
+        if not random_learning:
+            results['individual'] = [
+                list(accumulate((exp[1] for exp in i.experience), max))
+                for i in original_individuals
+            ]
+        if random_learning:
+            results['random'] = [
+                list(accumulate((exp[1] for exp in i.experience), max))
+                for i in original_individuals
+            ]
+            continue
+
+        # SAME AS PARENT
+        for individual in original_individuals:
+            individual.experience = individual.experience[:INHERIT_LEARN_ITS]
+
+        config.INHERIT_SAMPLES = INHERIT_SAMPLES
+        config.SOCIAL_POOL = 1
+        config.INHERIT_TYPE = 'parent'
+
+        with concurrent.futures.ProcessPoolExecutor(
+                max_workers=8
+        ) as executor:
+            futures = []
+            for individual in original_individuals:
+                grid = individual.body.grid
+                futures.append(executor.submit(run, rng, grid, individual))
+        same_individuals = []
+        for future in futures:
+            same_individuals.append(future.result())
+
+        results['parent-same'] = [
             list(accumulate((exp[1] for exp in i.experience), max))
-            for i in original_individuals
+            for i in same_individuals
         ]
-    if random_learning:
-        results['random'] = [
+
+        # CHANGE FROM PARENT
+        for individual in original_individuals:
+            individual.body.mutate(rng)
+
+        with concurrent.futures.ProcessPoolExecutor(
+                max_workers=8
+        ) as executor:
+            futures = []
+            for individual in original_individuals:
+                grid = individual.body.grid
+                futures.append(executor.submit(run, rng, grid, individual))
+        change_individuals = []
+        for future in futures:
+            change_individuals.append(future.result())
+
+        results['parent-change-inherit'] = [
             list(accumulate((exp[1] for exp in i.experience), max))
-            for i in original_individuals
+            for i in change_individuals
         ]
-        continue
 
-    # SAME AS PARENT
-    for individual in original_individuals:
-        individual.experience = individual.experience[:INHERIT_LEARN_ITS]
+        # NO INHERITANCE
+        with concurrent.futures.ProcessPoolExecutor(
+                max_workers=8
+        ) as executor:
+            futures = []
+            for individual in original_individuals:
+                grid = individual.body.grid
+                futures.append(executor.submit(run, rng, grid))
+        change_individuals = []
+        for future in futures:
+            change_individuals.append(future.result())
 
-    config.INHERIT_SAMPLES = INHERIT_SAMPLES
-    config.SOCIAL_POOL = 1
-    config.INHERIT_TYPE = 'parent'
-
-    with concurrent.futures.ProcessPoolExecutor(
-            max_workers=8
-    ) as executor:
-        futures = []
-        for individual in original_individuals:
-            grid = individual.body.grid
-            futures.append(executor.submit(run, rng, grid, individual))
-    same_individuals = []
-    for future in futures:
-        same_individuals.append(future.result())
-
-    results['parent-same'] = [
-        list(accumulate((exp[1] for exp in i.experience), max))
-        for i in same_individuals
-    ]
-
-    # CHANGE FROM PARENT
-    for individual in original_individuals:
-        individual.body.mutate(rng)
-
-    with concurrent.futures.ProcessPoolExecutor(
-            max_workers=8
-    ) as executor:
-        futures = []
-        for individual in original_individuals:
-            grid = individual.body.grid
-            futures.append(executor.submit(run, rng, grid, individual))
-    change_individuals = []
-    for future in futures:
-        change_individuals.append(future.result())
-
-    results['parent-change-inherit'] = [
-        list(accumulate((exp[1] for exp in i.experience), max))
-        for i in change_individuals
-    ]
-
-    # NO INHERITANCE
-    with concurrent.futures.ProcessPoolExecutor(
-            max_workers=8
-    ) as executor:
-        futures = []
-        for individual in original_individuals:
-            grid = individual.body.grid
-            futures.append(executor.submit(run, rng, grid))
-    change_individuals = []
-    for future in futures:
-        change_individuals.append(future.result())
-
-    results['parent-change-individual'] = [
-        list(accumulate((exp[1] for exp in i.experience), max))
-        for i in change_individuals
-    ]
+        results['parent-change-individual'] = [
+            list(accumulate((exp[1] for exp in i.experience), max))
+            for i in change_individuals
+        ]
 
 
-with open("learn_results.pkl", "wb") as f:
-    pickle.dump(results, f)
+    with open(f"learn_results{repetition}.pkl", "wb") as f:
+        pickle.dump(results, f)
