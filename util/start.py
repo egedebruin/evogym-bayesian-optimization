@@ -55,11 +55,11 @@ def read_args():
 		extra += "_maxmutation-" + str(args.mutation)
 	if args.bo_restarts:
 		config.BO_RESTARTS = args.bo_restarts
+	else:
+		config.BO_RESTARTS = 1
 	if args.short:
 		config.FUNCTION_EVALUATIONS = 100000
 		extra += "_short-" + str(args.short)
-	else:
-		config.BO_RESTARTS = 1
 	config.FOLDER = f"results/learn-{args.learn}_inherit-{args.inherit_samples}_type-{args.inherit_type}_pool-{args.social_pool}_environment-{args.environment}_method-{args.learn_method}{extra}_repetition-{args.repetition}/"
 
 def make_rng_seed():
