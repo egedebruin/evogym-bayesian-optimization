@@ -49,10 +49,10 @@ def read_args():
 		extra += "_changing-" + str(args.change_prob)
 	if args.min_mutation:
 		config.MIN_MUTATION = args.min_mutation
-		extra += "_minmutation-" + str(args.mutation)
+		extra += "_minmutation-" + str(args.min_mutation)
 	if args.max_mutation:
-		config.MAX_MUTATION = args.mutation
-		extra += "_maxmutation-" + str(args.mutation)
+		config.MAX_MUTATION = args.max_mutation
+		extra += "_maxmutation-" + str(args.max_mutation)
 	if args.bo_restarts:
 		config.BO_RESTARTS = args.bo_restarts
 	else:
