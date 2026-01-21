@@ -47,6 +47,7 @@ LINE_STYLES = {
 
 def make_the_plot(inherit, inherit_type, inherit_pool, environment, ax):
     GENERATIONS = 50
+    WINDOW = 5
     key = (inherit, inherit_type, inherit_pool)
     label = LABELS.get(key)
     color = COLORS.get(key)
@@ -56,7 +57,7 @@ def make_the_plot(inherit, inherit_type, inherit_pool, environment, ax):
 
     curves = []
     for repetition in range(1, REPETITIONS + 1):
-        data_path = f'results/learn-{EVALS_PER_GEN}_inherit-{inherit}_type-{inherit_type}_pool-{inherit_pool}_environment-{environment}_repetition-{repetition}'
+        data_path = f'results/gecco2026/learn-{EVALS_PER_GEN}_inherit-{inherit}_type-{inherit_type}_pool-{inherit_pool}_environment-{environment}_repetition-{repetition}'
         data_array = plot.get_data(data_path, GENERATIONS)
 
         if data_array is None or len(data_array) < GENERATIONS:
@@ -65,8 +66,7 @@ def make_the_plot(inherit, inherit_type, inherit_pool, environment, ax):
             print()
             continue
 
-        max_vals = np.max(data_array, axis=1)
-        running_max = np.maximum.accumulate(max_vals)
+        max_vals = np.mean(data_array, axis=1)
         curves.append(max_vals)
 
     if not curves:
@@ -79,13 +79,21 @@ def make_the_plot(inherit, inherit_type, inherit_pool, environment, ax):
     q25 = np.percentile(curves, 25, axis=0)
     q75 = np.percentile(curves, 75, axis=0)
 
+    def moving_average(x, w):
+        return np.convolve(x, np.ones(w) / w, mode='valid')
+
+    mean_vals = moving_average(mean_vals, WINDOW)
+    q25 = moving_average(q25, WINDOW)
+    q75 = moving_average(q75, WINDOW)
+    x_vals = x_vals[WINDOW - 1:]
+
     ax.plot(x_vals, mean_vals, label=label, color=color, linestyle=LINE_STYLES.get(key))
     ax.fill_between(x_vals, q25, q75, color=color, alpha=0.2)
 
     csv_data = {'cat': [LABELS[key] for _ in range(50)], 'x': range(50), 'y': np.mean(curves, axis=0),
                 'ymin': np.percentile(curves, 25, axis=0),
                 'ymax': np.percentile(curves, 25, axis=0)}
-    pd.DataFrame(csv_data).to_csv(f'performance-line-{environment}-{key[1]}-{key[2]}.txt', index=False, sep='\t')
+    # pd.DataFrame(csv_data).to_csv(f'performance-line-{environment}-{key[1]}-{key[2]}.txt', index=False, sep='\t')
 
 
 def main():
@@ -103,10 +111,10 @@ def main():
         "lines.linewidth": 2.2
     })
 
-    environments = ['catch']
+    environments = ['simple', 'steps', 'carry', 'catch']
     strategy_keys = list(LABELS.keys())  # 6 total strategies
 
-    fig, axes = plt.subplots(nrows=2, figsize=(10, 10), sharey=False)
+    fig, axes = plt.subplots(nrows=max(2, len(environments)), figsize=(10, 10), sharey=False)
     fig.subplots_adjust(top=0.85, right=0.78)  # Make space for legend
 
     for i, env in enumerate(environments):
@@ -124,8 +132,8 @@ def main():
     fig.legend(handles, labels, loc='center right', title="Strategy", frameon=False)
 
     plt.tight_layout(rect=[0, 0, 0.75, 1])  # Leave room for legend
-    plt.show()
-    # plt.savefig(f'plot.pdf')
+    # plt.show()
+    plt.savefig(f'plot.pdf')
 
 
 if __name__ == '__main__':
