@@ -1,3 +1,4 @@
+from configs import config
 from individual import Individual
 import numpy as np
 
@@ -19,8 +20,8 @@ class Archive:
             self.append(individual)
 
     def append(self, individual: Individual):
-        first_descriptor = Archive.relative_activity(individual.body.grid)
-        second_descriptor = Archive.elongation(individual.body.grid)
+        first_descriptor = Archive.descriptor(1, individual.body.grid)
+        second_descriptor = Archive.descriptor(2, individual.body.grid)
 
         first_location = self.size - 1 if first_descriptor == 1 else int(first_descriptor * self.size)
         second_location = self.size - 1 if second_descriptor == 1 else int(second_descriptor * self.size)
@@ -38,12 +39,13 @@ class Archive:
         all_individuals = []
         for row in self.archive:
             for individual in row:
-                all_individuals.append(individual)
+                if individual is not None:
+                    all_individuals.append(individual)
         return all_individuals
 
     def get_from_cell(self, individual: Individual):
-        first_descriptor = Archive.relative_activity(individual.body.grid)
-        second_descriptor = Archive.elongation(individual.body.grid)
+        first_descriptor = Archive.descriptor(1, individual.body.grid)
+        second_descriptor = Archive.descriptor(2, individual.body.grid)
 
         first_location = int(first_descriptor * self.size) - 1
         second_location = int(second_descriptor * self.size) - 1
@@ -61,6 +63,18 @@ class Archive:
     def get_random(self, amount: int, rng):
         all_individuals = self.get_all_individuals()
         return rng.choice(all_individuals, size=amount, replace=False).tolist()
+
+    @staticmethod
+    def descriptor(number: int, body: np.ndarray):
+        descriptor = config.DESCRIPTORS[number - 1]
+        if descriptor == 'relative_activity':
+            return Archive.relative_activity(body)
+        elif descriptor == 'elongation':
+            return Archive.elongation(body)
+        elif descriptor == 'compactness':
+            return Archive.compactness(body)
+        else:
+            raise ValueError(f"Unknown descriptor: {descriptor}")
 
     @staticmethod
     def relative_activity(body: np.ndarray):

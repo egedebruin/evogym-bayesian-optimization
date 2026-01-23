@@ -55,6 +55,16 @@ class Individual:
         new_individual.original_generation = generation_index
         return new_individual
 
+    def do_the_inherit(self, selected_individuals):
+        pre_sorted_experiences = [
+            sorted(ind.experience, key=lambda x: x[1], reverse=True)
+            for ind in selected_individuals
+        ]
+        for i in range(config.LEARN_ITERATIONS):
+            for j in range(config.SOCIAL_POOL):
+                if pre_sorted_experiences[j][i][0] not in [exp[0] for exp in self.inherited_experience]:
+                    self.inherited_experience.append(pre_sorted_experiences[j][i])
+
     def inherit_experience(self, population, parent, rng):
         self.inherited_experience = []
         if config.INHERIT_TYPE == 'parent':
@@ -72,16 +82,6 @@ class Individual:
 
         self.do_the_inherit(selected_individuals)
 
-    def do_the_inherit(self, selected_individuals):
-        pre_sorted_experiences = [
-            sorted(ind.experience, key=lambda x: x[1], reverse=True)
-            for ind in selected_individuals
-        ]
-        for i in range(config.LEARN_ITERATIONS):
-            for j in range(config.SOCIAL_POOL):
-                if pre_sorted_experiences[j][i][0] not in [exp[0] for exp in self.inherited_experience]:
-                    self.inherited_experience.append(pre_sorted_experiences[j][i])
-
     def inherit_experience_archive(self, archive, parent, rng):
         self.inherited_experience = []
         if config.INHERIT_TYPE == 'parent':
@@ -94,12 +94,12 @@ class Individual:
         elif config.INHERIT_TYPE == 'random':
             selected_individuals = archive.get_random(config.SOCIAL_POOL, rng)
         elif config.INHERIT_TYPE == 'similar':
-            selected_individuals = archive.get_most_similar(config.SOCIAL_POOL, rng)
+            selected_individuals = archive.get_most_similar(self, config.SOCIAL_POOL)
         elif config.INHERIT_TYPE == 'cell':
             if config.SOCIAL_POOL != 1:
                 raise ValueError(f"SOCIAL_POOL must be equal to 1")
 
-            archive_similar = archive.get_most_similar(self)
+            archive_similar = archive.get_from_cell(self)
             if archive_similar is None:
                 archive_similar = parent
             selected_individuals = [archive_similar]

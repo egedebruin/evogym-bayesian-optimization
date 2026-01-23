@@ -75,13 +75,12 @@ def main():
 		population, num_generations = restart_population.get_population()
 		rng = restart_population.get_rng()
 		logger.info("Restart succeeded")
-		logger.error("Restart is not working due to: Heights, ...")
+		logger.error("Restart is not working due to: Heights, QD, ...")
 		exit()
 	else:
 		logger.info(f"Generation 0")
 		rng = start.make_rng_seed()
 		num_generations = 0
-		archive = Archive(30)
 		individuals = []
 		for i in range(config.POP_SIZE):
 			body_size = rng.integers(config.MIN_INITIAL_SIZE, config.MAX_INITIAL_SIZE + 1)
@@ -92,27 +91,38 @@ def main():
 			individuals.append(individual)
 
 		population, heights = run_generation(individuals, heights, rng)
-		archive.append_population(population)
-		# writer.write_to_populations_file(population)
-		writer.write_to_archive_file(archive)
+		archive = None
+		if config.MAP_ELITES:
+			archive = Archive(config.MAP_GRID_SIZE)
+			archive.append_population(population)
+			writer.write_to_archive_file(archive)
+		else:
+			writer.write_to_populations_file(population)
 		writer.write_to_rng_file(rng)
 
 	number_of_generations = calculate_generations()
 
-	# parent_selection = Selection(config.OFFSPRING_SIZE, config.PARENT_SELECTION, {'pool_size': config.PARENT_POOL})
-	# survivor_selection = Selection(config.POP_SIZE, config.SURVIVOR_SELECTION)
+	parent_selection = Selection(config.OFFSPRING_SIZE, config.PARENT_SELECTION, {'pool_size': config.PARENT_POOL})
+	survivor_selection = Selection(config.POP_SIZE, config.SURVIVOR_SELECTION)
 	for generation_index in range(1, number_of_generations + 1):
 		if generation_index < num_generations:
 			continue
 		logger.info(f"Generation {generation_index}/{number_of_generations}")
-		# offspring = get_offspring(population, generation_index, parent_selection, rng)
-		offspring = get_offspring_from_archive(archive, generation_index, rng)
+
+		if config.MAP_ELITES:
+			offspring = get_offspring_from_archive(archive, generation_index, rng)
+		else:
+			offspring = get_offspring(population, generation_index, parent_selection, rng)
+
 		evaluated_offspring, heights = run_generation(offspring, heights, rng)
-		archive.append_population(evaluated_offspring)
-		# population += evaluated_offspring
-		# population = survivor_selection.select(population, rng)
-		# writer.write_to_populations_file(population)
-		writer.write_to_archive_file(archive)
+
+		if config.MAP_ELITES:
+			archive.append_population(evaluated_offspring)
+			writer.write_to_archive_file(archive)
+		else:
+			population += evaluated_offspring
+			population = survivor_selection.select(population, rng)
+			writer.write_to_populations_file(population)
 		writer.write_to_rng_file(rng)
 
 if __name__ == '__main__':

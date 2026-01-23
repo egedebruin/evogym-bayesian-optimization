@@ -4,7 +4,7 @@ READ_ARGS = True
 LEARN_ITERATIONS = 10
 INHERIT_SAMPLES = 2 # from -1 to LEARN_ITERATIONS
 ENVIRONMENT = 'simple'
-INHERIT_TYPE = 'best' # parent, random, none, similar or best
+INHERIT_TYPE = 'best' # parent, random, none, similar, cell, best
 SOCIAL_POOL = 8
 LEARN_METHOD = 'bo'
 
@@ -26,10 +26,15 @@ FUNCTION_EVALUATIONS = 100000
 SIMULATION_LENGTH = 500 # 10 seconds
 PARALLEL_PROCESSES = 100
 
-# generational, elitist or tournament
+# generational, elitist, tournament
 SURVIVOR_SELECTION = 'generational'
 PARENT_SELECTION = 'tournament'
-CONTROLLER_TYPE = 'sine' # sine or nn
+CONTROLLER_TYPE = 'sine' # sine, nn
+
+MAP_ELITES = True
+DESCRIPTORS = ['relative_activity', 'elongation'] # relative_activity, elongation, compactness
+# now we support exactly two descriptors
+MAP_GRID_SIZE = 30
 
 PARENT_POOL = 4
 MUTATION_STD = 0.1
