@@ -23,6 +23,7 @@ def read_args():
 	parser.add_argument('--change-prob', help='Changing probability per block in changing environment', required=False, type=float)
 	parser.add_argument('--min-mutation', help='Morphology mutation minimum', required=False, type=int)
 	parser.add_argument('--max-mutation', help='Morphology mutation maximum', required=False, type=int)
+	parser.add_argument('--short', help='Fewer function evaluations', required=False, type=int)
 
 	args = parser.parse_args()
 	config.LEARN_ITERATIONS = args.learn
@@ -48,14 +49,17 @@ def read_args():
 		extra += "_changing-" + str(args.change_prob)
 	if args.min_mutation:
 		config.MIN_MUTATION = args.min_mutation
-		extra += "_minmutation-" + str(args.mutation)
+		extra += "_minmutation-" + str(args.min_mutation)
 	if args.max_mutation:
-		config.MAX_MUTATION = args.mutation
-		extra += "_maxmutation-" + str(args.mutation)
+		config.MAX_MUTATION = args.max_mutation
+		extra += "_maxmutation-" + str(args.max_mutation)
 	if args.bo_restarts:
 		config.BO_RESTARTS = args.bo_restarts
 	else:
 		config.BO_RESTARTS = 1
+	if args.short:
+		config.FUNCTION_EVALUATIONS = 100000
+		extra += "_short-" + str(args.short)
 	config.FOLDER = f"results/learn-{args.learn}_inherit-{args.inherit_samples}_type-{args.inherit_type}_pool-{args.social_pool}_environment-{args.environment}_method-{args.learn_method}{extra}_repetition-{args.repetition}/"
 
 def make_rng_seed():
