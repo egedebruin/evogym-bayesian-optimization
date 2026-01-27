@@ -8,12 +8,12 @@ from evogym import EvoWorld, EvoSim, EvoViewer, utils, WorldObject
 
 from configs import config
 from util import writer
-from worlds import random_environment_creator
+from worlds import random_environment_creator, random_steps_environment_creator
 
 
-def build_world(robot_structure, rng=None, world=None):
+def build_world(robot_structure, rng=None, world=None, generation_index=None):
     if world is None:
-        world, _ = get_environment(rng)
+        world, _ = get_environment(rng, generation_index=generation_index)
         world = add_extra_attributes(world, rng)
     x, y = start_position_robot()
     world.add_from_array(
@@ -94,7 +94,7 @@ def start_position_robot():
         return 100, 1
     return 1, 1
 
-def get_environment(rng, previous_heights=None):
+def get_environment(rng, previous_heights=None, generation_index=None):
     heights = []
     if config.ENVIRONMENT in ['simple', 'jump', 'catch', 'bidirectional', 'bidirectional2']:
         world = EvoWorld.from_json(os.path.join('worlds', 'simple_environment.json'))
@@ -106,6 +106,10 @@ def get_environment(rng, previous_heights=None):
         world = EvoWorld.from_json(os.path.join('worlds', 'rugged_environment.json'))
     elif config.ENVIRONMENT == 'steps':
         world = EvoWorld.from_json(os.path.join('worlds', 'steps_environment.json'))
+    elif config.ENVIRONMENT == 'randomsteps':
+        platform_length = 7 + config.STEPS_CHANGE_DEGREE - 2 * config.STEPS_CHANGE_DEGREE * (generation_index % 2)
+        contents, heights = random_steps_environment_creator.make(platform_length)
+        world = create_random_file(contents)
     elif config.ENVIRONMENT in ['random', 'changing']:
         if config.ENVIRONMENT == 'random' or previous_heights is None or len(previous_heights) == 0:
             contents, heights = random_environment_creator.make(rng)
@@ -115,17 +119,21 @@ def get_environment(rng, previous_heights=None):
         if config.WRITE_RANDOM_ENV:
             writer.write_to_environments_file(";".join(str(e) for e in heights))
 
-        filename = f'{str(uuid.uuid4())}.json'
-        directory = f'worlds/random/'
-        if not os.path.exists(directory):
-            os.makedirs(directory)
-        with open(directory + filename, 'w') as outfile:
-            json.dump(contents, outfile, indent=4)
-        world = EvoWorld.from_json(directory + filename)
-        os.remove(directory + filename)
+        world = create_random_file(contents)
     else:
         raise ValueError(f"Environment {config.ENVIRONMENT} does not exist.")
     return world, heights
+
+def create_random_file(contents):
+    filename = f'{str(uuid.uuid4())}.json'
+    directory = f'worlds/random/'
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+    with open(directory + filename, 'w') as outfile:
+        json.dump(contents, outfile, indent=4)
+    world = EvoWorld.from_json(directory + filename)
+    os.remove(directory + filename)
+    return world
 
 
 def tracker(viewer):
@@ -160,7 +168,7 @@ def add_extra_attributes(world, rng):
     return world
 
 def calculate_objective_value(start_position, end_position, extra_metrics, generation_index):
-    if config.ENVIRONMENT in ['simple', 'rugged', 'steps', 'random', 'changing']:
+    if config.ENVIRONMENT in ['simple', 'rugged', 'steps', 'random', 'changing', 'randomsteps']:
         return np.mean(end_position[0]) - np.mean(start_position[0])
     elif config.ENVIRONMENT in ['bidirectional', 'bidirectional2']:
         if generation_index % 2 == 0:
@@ -178,7 +186,7 @@ def calculate_objective_value(start_position, end_position, extra_metrics, gener
         raise ValueError(f"Environment {config.ENVIRONMENT} does not exist.")
 
 def calculate_reward(start_position, end_position, extra_metrics, generation_index):
-    if config.ENVIRONMENT in ['simple', 'rugged', 'steps', 'random', 'bidirectional', 'bidirectional2', 'climb', 'changing']:
+    if config.ENVIRONMENT in ['simple', 'rugged', 'steps', 'random', 'bidirectional', 'bidirectional2', 'climb', 'changing', 'randomsteps']:
         return calculate_objective_value(start_position, end_position, extra_metrics, generation_index)
     elif config.ENVIRONMENT == 'jump':
         return np.mean(end_position[1]) - np.mean(start_position[1])

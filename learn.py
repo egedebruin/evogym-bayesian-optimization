@@ -24,7 +24,7 @@ RL_TYPES = [TYPE_DDPG, TYPE_PPO]
 
 
 def learn_individuals(individuals, heights, rng):
-	current_world, new_heights = world.get_environment(rng, heights)
+	current_world, new_heights = world.get_environment(rng, previous_heights=heights, generation_index=individuals[0].generation_index)
 	current_world = world.add_extra_attributes(current_world, rng)
 
 	with concurrent.futures.ProcessPoolExecutor(
