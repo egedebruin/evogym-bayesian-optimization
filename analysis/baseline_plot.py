@@ -6,10 +6,10 @@ from matplotlib import rcParams
 import plot
 
 # Constants
-POP_SIZE = 100
+POP_SIZE = 80
 EVALS_PER_GEN = 50
-REPETITIONS = 5
-SUB_FOLDER = 'changing-morphology'
+REPETITIONS = 3
+SUB_FOLDER = 'randomsteps'
 
 LABELS = {
     (-1, 'none', 0): 'Darwinian',
@@ -39,7 +39,7 @@ LINE_STYLES = {
     (8, 'best', 1): ':',
     (8, 'best', 8): ':',
     (1, 'parent', 1): '--',
-    (8, 'parent', 1): ':',
+    (8, 'parent', 1): '--',
     (8, 'random', 1): '-.',
     (8, 'random', 8): '-.',
     (8, 'similar', 1): (0, (3, 1, 1, 1)),
@@ -69,10 +69,13 @@ def make_the_plot(inherit, inherit_type, inherit_pool, environment, ax, learn_me
             out[i] = np.mean(x[start:end])
         return out
 
-    extra = "_changing-1e-07"
-    extra += f"_mutation-{environment}"
+    extra = f"_changing-{environment}"
+    # if environment[0] != 0:
+    #     extra += f"_minmutation-{environment[0]}"
+    # extra += f"_maxmutation-{environment[1]}"
+    # extra = f"_changedegree-{environment}"
 
-    GENERATIONS = 100
+    GENERATIONS = 50
     key = (inherit, inherit_type, inherit_pool)
     # label = LABELS.get(key)
     # color = COLORS.get(key)
@@ -105,11 +108,11 @@ def make_the_plot(inherit, inherit_type, inherit_pool, environment, ax, learn_me
     x_vals = np.arange(1, GENERATIONS + 1) * EVALS_PER_GEN * POP_SIZE
     curves = np.array(curves)
 
-    mean_vals = np.mean(curves, axis=0)
-    q25 = np.percentile(curves, 0, axis=0)
-    q75 = np.percentile(curves, 100, axis=0)
+    mean_vals = np.median(curves, axis=0)
+    q25 = np.percentile(curves, 25, axis=0)
+    q75 = np.percentile(curves, 75, axis=0)
 
-    window = 2
+    window = 4
 
     mean_vals = smooth(mean_vals, window)
     q25 = smooth(q25, window)
@@ -134,7 +137,7 @@ def main():
         "lines.linewidth": 2.2
     })
 
-    environments = ['1', '2', '3', '5']
+    environments = ['1e-06', '0.1', '0.2', '0.4', '1']
     strategy_keys = list(LABELS.keys())  # 6 total strategies
 
     fig, axes = plt.subplots(nrows=max(2, len(environments)), figsize=(10, 10), sharey=False)
@@ -160,8 +163,8 @@ def main():
     fig.legend(handles, labels, loc='center right', title="Strategy", frameon=False)
 
     plt.tight_layout(rect=[0, 0, 0.75, 1])  # Leave room for legend
-    # plt.show()
-    plt.savefig(f'plot.pdf')
+    plt.show()
+    # plt.savefig(f'plot.pdf')
 
 
 if __name__ == '__main__':
