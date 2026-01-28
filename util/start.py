@@ -24,6 +24,7 @@ def read_args():
 	parser.add_argument('--min-mutation', help='Morphology mutation minimum', required=False, type=int)
 	parser.add_argument('--max-mutation', help='Morphology mutation maximum', required=False, type=int)
 	parser.add_argument('--short', help='Fewer function evaluations', required=False, type=int)
+	parser.add_argument('--change-degree', help='Degree of change in randomstep environment', required=False, type=int)
 
 	args = parser.parse_args()
 	config.LEARN_ITERATIONS = args.learn
@@ -53,6 +54,9 @@ def read_args():
 	if args.max_mutation:
 		config.MAX_MUTATION = args.max_mutation
 		extra += "_maxmutation-" + str(args.max_mutation)
+	if args.change_degree:
+		config.STEPS_CHANGE_DEGREE = args.change_degree
+		extra += "_changedegree-" + str(args.change_degree)
 	if args.bo_restarts:
 		config.BO_RESTARTS = args.bo_restarts
 	else:

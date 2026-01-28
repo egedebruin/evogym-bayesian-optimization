@@ -45,7 +45,7 @@ def main():
     best_individual = get_best_individual(config.FOLDER)
 
     grid = np.array(ast.literal_eval(best_individual[1]))
-    sim, viewer = world.build_world(grid, start.make_rng_seed())
+    sim, viewer = world.build_world(grid, rng=start.make_rng_seed())
 
     experience = ast.literal_eval(best_individual[3])
     controller_values = Brain.next_point_to_controller_values(experience, sim.get_actuator_indices('robot'))
