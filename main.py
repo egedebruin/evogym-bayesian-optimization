@@ -1,8 +1,7 @@
 import os
 
-from util.archive import Archive
-
 # Force single-threaded execution
+# DO THIS BEFORE IMPORTS
 os.environ["OMP_NUM_THREADS"] = "1"       # OpenMP
 os.environ["MKL_NUM_THREADS"] = "1"       # Intel MKL
 os.environ["OPENBLAS_NUM_THREADS"] = "1"  # OpenBLAS
@@ -17,6 +16,7 @@ from configs import config
 from individual import Individual
 from selection import Selection
 from util import restart_population, writer, start
+from util.archive import Archive
 import learn
 from util.logger_setup import logger, logger_setup
 
