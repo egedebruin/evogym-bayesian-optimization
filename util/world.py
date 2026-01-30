@@ -107,7 +107,7 @@ def get_environment(rng, previous_heights=None, generation_index=None):
     elif config.ENVIRONMENT == 'steps':
         world = EvoWorld.from_json(os.path.join('worlds', 'steps_environment.json'))
     elif config.ENVIRONMENT == 'randomsteps':
-        platform_length = config.STEPS_CHANGE_DEGREE[generation_index % 2]
+        platform_length = config.STEPS_CHANGE_DEGREE[(generation_index // 4) % 2]
         contents, heights = random_steps_environment_creator.make(platform_length)
         world = create_random_file(contents)
     elif config.ENVIRONMENT in ['random', 'changing']:
