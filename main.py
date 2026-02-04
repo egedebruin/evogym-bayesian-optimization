@@ -40,14 +40,9 @@ def get_offspring(population, generation_index, parent_selection, rng:np.random.
 		offspring.append(new_individual)
 	return offspring
 
-def get_offspring_from_archive(archive: Archive, generation_index, rng:np.random.Generator):
-	offspring = []
-	for i in range(config.OFFSPRING_SIZE):
-		parent = archive.receive(rng)
-		new_individual = parent.generate_new_individual(generation_index, i, rng)
-		new_individual.inherit_experience_archive(archive, parent, rng)
-		offspring.append(new_individual)
-	return offspring
+def get_offspring_from_archive(archive: Archive, generation_index, parent_selection, rng:np.random.Generator):
+	all_individuals = archive.get_all_individuals()
+	return get_offspring(all_individuals, generation_index, parent_selection, rng)
 
 
 def calculate_generations():
@@ -110,7 +105,7 @@ def main():
 		logger.info(f"Generation {generation_index}/{number_of_generations}")
 
 		if config.MAP_ELITES:
-			offspring = get_offspring_from_archive(archive, generation_index, rng)
+			offspring = get_offspring_from_archive(archive, generation_index, parent_selection, rng)
 		else:
 			offspring = get_offspring(population, generation_index, parent_selection, rng)
 

@@ -29,12 +29,6 @@ class Archive:
         if self.archive[first_location][second_location] is None or individual.objective_value >= self.archive[first_location][second_location].objective_value:
             self.archive[first_location][second_location] = individual
 
-    def receive(self, rng: np.random.Generator):
-        result = None
-        while result is None:
-            result = self.archive[rng.integers(self.size)][rng.integers(self.size)]
-        return result
-
     def get_all_individuals(self):
         all_individuals = []
         for row in self.archive:
