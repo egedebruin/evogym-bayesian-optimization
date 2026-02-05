@@ -50,7 +50,7 @@ def get_population():
         individual = Individual(individual_id, body, brain, original_generation)
         individual.add_restart_values(objective_value, best_brain, experience, parent_id)
         population.append(individual)
-    return population, len(generations) - 1
+    return population, len(generations)
 
 def get_rng():
     loaded_state = np.load(config.FOLDER + "rng_state.npy", allow_pickle=True).item()

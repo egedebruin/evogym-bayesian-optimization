@@ -7,6 +7,7 @@ os.environ["MKL_NUM_THREADS"] = "1"       # Intel MKL
 os.environ["OPENBLAS_NUM_THREADS"] = "1"  # OpenBLAS
 os.environ["NUMEXPR_NUM_THREADS"] = "1"   # NumExpr
 
+import monkey_patch
 import numpy as np
 
 from robot.body import Body
@@ -65,13 +66,18 @@ def main():
 	set_number_of_sensors()
 
 	heights = []
+	archive = None
 	if os.path.exists(config.FOLDER + "populations.txt"):
+		if config.ENVIRONMENT == 'changing':
+			logger.error("Restart is not working due to: Heights")
+			exit()
 		logger.info("Restarting populations...")
 		population, num_generations = restart_population.get_population()
 		rng = restart_population.get_rng()
+		if config.MAP_ELITES:
+			archive = Archive(config.MAP_GRID_SIZE)
+			archive.append_population(population)
 		logger.info("Restart succeeded")
-		logger.error("Restart is not working due to: Heights, QD, ...")
-		exit()
 	else:
 		logger.info(f"Generation 0")
 		rng = start.make_rng_seed()
@@ -86,7 +92,6 @@ def main():
 			individuals.append(individual)
 
 		population, heights = run_generation(individuals, heights, rng)
-		archive = None
 		if config.MAP_ELITES:
 			archive = Archive(config.MAP_GRID_SIZE)
 			archive.append_population(population)
