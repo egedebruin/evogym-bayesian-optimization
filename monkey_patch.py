@@ -17,7 +17,7 @@ def patched_setulb(m, x, low_bnd, upper_bnd, nbd,
 	)
 
 	# Clip AFTER setulb
-	np.clip(x, 0.5, 0.5, out=x)
+	np.clip(x, low_bnd, upper_bnd, out=x)
 
 # Monkey patch
 _lbfgsb.setulb = patched_setulb
