@@ -8,7 +8,7 @@ from evogym import EvoWorld, EvoSim, EvoViewer, utils, WorldObject
 
 from configs import config
 from util import writer
-from worlds import random_environment_creator, random_steps_environment_creator
+from worlds import random_environment_creator, random_steps_environment_creator, random_ceiling_environment_creator
 
 
 def build_world(robot_structure, rng=None, world=None, generation_index=None):
@@ -108,7 +108,10 @@ def get_environment(rng, previous_heights=None, generation_index=None):
         world = EvoWorld.from_json(os.path.join('worlds', 'steps_environment.json'))
     elif config.ENVIRONMENT == 'randomsteps':
         platform_length = config.STEPS_CHANGE_DEGREE[(generation_index // 4) % 2]
-        contents, heights = random_steps_environment_creator.make(platform_length)
+        contents = random_steps_environment_creator.make(platform_length)
+        world = create_random_file(contents)
+    elif config.ENVIRONMENT == 'ceiling':
+        contents = random_ceiling_environment_creator.make(3, 20)
         world = create_random_file(contents)
     elif config.ENVIRONMENT in ['random', 'changing']:
         if config.ENVIRONMENT == 'random' or previous_heights is None or len(previous_heights) == 0:
@@ -168,7 +171,7 @@ def add_extra_attributes(world, rng):
     return world
 
 def calculate_objective_value(start_position, end_position, extra_metrics, generation_index):
-    if config.ENVIRONMENT in ['simple', 'rugged', 'steps', 'random', 'changing', 'randomsteps']:
+    if config.ENVIRONMENT in ['simple', 'rugged', 'steps', 'random', 'changing', 'randomsteps', 'ceiling']:
         return np.mean(end_position[0]) - np.mean(start_position[0])
     elif config.ENVIRONMENT in ['bidirectional', 'bidirectional2']:
         if generation_index % 2 == 0:
@@ -186,7 +189,7 @@ def calculate_objective_value(start_position, end_position, extra_metrics, gener
         raise ValueError(f"Environment {config.ENVIRONMENT} does not exist.")
 
 def calculate_reward(start_position, end_position, extra_metrics, generation_index):
-    if config.ENVIRONMENT in ['simple', 'rugged', 'steps', 'random', 'bidirectional', 'bidirectional2', 'climb', 'changing', 'randomsteps']:
+    if config.ENVIRONMENT in ['simple', 'rugged', 'steps', 'random', 'bidirectional', 'bidirectional2', 'climb', 'changing', 'randomsteps', 'ceiling']:
         return calculate_objective_value(start_position, end_position, extra_metrics, generation_index)
     elif config.ENVIRONMENT == 'jump':
         return np.mean(end_position[1]) - np.mean(start_position[1])

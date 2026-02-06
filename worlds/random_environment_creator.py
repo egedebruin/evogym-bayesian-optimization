@@ -37,8 +37,13 @@ def change(rng, last_heights):
             height += previous_choice
 
         heights.append(height)
-
-    contents = heights_to_contents(heights)
+    contents = {
+        "grid_width": 100,
+        "grid_height": 15,
+        "objects": {
+            'ground': heights_to_contents(heights),
+        }
+    }
     return contents, heights
 
 def get_choices(height, previous_choice):
@@ -74,13 +79,46 @@ def heights_to_contents(heights):
             neighbours[str(current)] = current_neighbours
 
     return {
-        "grid_width": 100,
-        "grid_height": 15,
-        "objects": {
-            "ground": {
-                "indices": indices,
-                "types": types,
-                "neighbors": neighbours,
-            }
-        }
+        "indices": indices,
+        "types": types,
+        "neighbors": neighbours,
+    }
+
+def object_heights_to_contents(object_heights, types):
+    indices = []
+    neighbours = {}
+
+    previous_height = -1
+    extra_indices = []
+    extra_types = []
+    for i, height in enumerate(object_heights):
+        current = i + height * 100
+        left = current - 1
+
+        indices.append(current)
+
+        current_neighbours = []
+        if abs(previous_height - height) == 1:
+            difference = previous_height - height
+            new = current + 100 * difference
+            previous = new - 1
+
+            extra_indices.append(new)
+            extra_types.append(types[i])
+            neighbours[str(new)] = [previous, current]
+            neighbours[str(previous)].append(new)
+            current_neighbours.append(new)
+        elif previous_height != -1 and abs(previous_height - height) > 1:
+            raise ValueError("We do not allow height differences higher than 1 YET")
+
+        if left in indices:
+            neighbours[str(left)].append(current)
+            current_neighbours.append(left)
+        neighbours[str(current)] = current_neighbours
+        previous_height = height
+
+    return {
+        "indices": indices + extra_indices,
+        "types": types + extra_types,
+        "neighbors": neighbours,
     }

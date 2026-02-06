@@ -19,21 +19,24 @@ class Selection:
             selection.append(sorted(pool, key=lambda p: p.objective_value, reverse=True)[0])
         return selection
 
-    def _simple(self, population, rng):
+    def _simple(self, population):
         if self._mode == 'generational':
             key_func = lambda ind: (-ind.original_generation, -ind.objective_value)
         elif self._mode == 'elitist':
             key_func = lambda ind: -ind.objective_value
-        elif self._mode == 'random':
-            key_func = lambda ind: rng.random()
         else:
             raise ValueError(f"Unknown simple selection mode: {self._mode}")
 
         return sorted(population, key=key_func)[:self._selection_size]
 
     def select(self, population, rng):
-        if self._mode in ['generational', 'elitist', 'random']:
-            return self._simple(population, rng)
+        if self._mode in ['generational', 'elitist']:
+            return self._simple(population)
+
+        elif self._mode == 'random':
+            return [population[rng.integers(len(population))]
+                    for _ in range(self._selection_size)]
+
         elif self._mode == 'tournament':
             return self._tournament(population, rng)
         else:

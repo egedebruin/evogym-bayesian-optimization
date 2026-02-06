@@ -11,5 +11,11 @@ def make(platform_length):
             i += 1
         height += 1
     heights = heights[:length]
-    contents = heights_to_contents(heights)
-    return contents, heights
+    contents = {
+        "grid_width": 100,
+        "grid_height": 15,
+        "objects": {
+            'ground': heights_to_contents(heights),
+        }
+    }
+    return contents
