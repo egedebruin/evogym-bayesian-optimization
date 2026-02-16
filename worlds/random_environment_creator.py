@@ -15,7 +15,13 @@ def make(rng):
 
         heights.append(height)
 
-    contents = heights_to_contents(heights)
+    contents = {
+        "grid_width": 100,
+        "grid_height": 15,
+        "objects": {
+            'ground': heights_to_contents(heights),
+        }
+    }
     return contents, heights
 
 def change(rng, last_heights):
