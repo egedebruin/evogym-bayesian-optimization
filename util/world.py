@@ -111,7 +111,9 @@ def get_environment(rng, previous_heights=None, generation_index=None):
         contents = random_steps_environment_creator.make(platform_length)
         world = create_random_file(contents)
     elif config.ENVIRONMENT == 'ceiling':
-        contents = random_ceiling_environment_creator.make(3, 20)
+        obstacle_height = config.OBSTACLE_HEIGHTS[(generation_index // 4) % 2]
+        ceiling_height = config.CEILING_HEIGHTS[(generation_index // 4) % 2]
+        contents = random_ceiling_environment_creator.make(obstacle_height, ceiling_height)
         world = create_random_file(contents)
     elif config.ENVIRONMENT in ['random', 'changing']:
         if config.ENVIRONMENT == 'random' or previous_heights is None or len(previous_heights) == 0:
