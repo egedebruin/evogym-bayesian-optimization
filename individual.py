@@ -65,7 +65,7 @@ class Individual:
                 if pre_sorted_experiences[j][i][0] not in [exp[0] for exp in self.inherited_experience]:
                     self.inherited_experience.append(pre_sorted_experiences[j][i])
 
-    def inherit_experience(self, population, parent, rng):
+    def inherit_experience(self, population, parent, rng, archive=None):
         self.inherited_experience = []
         if config.INHERIT_TYPE == 'parent':
             selected_individuals = [parent]
@@ -75,29 +75,11 @@ class Individual:
             selected_individuals = rng.choice(population, size=config.SOCIAL_POOL, replace=False).tolist()
         elif config.INHERIT_TYPE == 'similar':
             selected_individuals = sorted(population, key=lambda ind: Individual.hamming_distance(self.body.grid, ind.body.grid))[:config.SOCIAL_POOL]
-        elif config.INHERIT_TYPE == 'none':
-            return
-        else:
-            raise ValueError(f"Unknown INHERIT TYPE: {config.INHERIT_TYPE}")
-
-        self.do_the_inherit(selected_individuals)
-
-    def inherit_experience_archive(self, archive, parent, rng):
-        self.inherited_experience = []
-        if config.INHERIT_TYPE == 'parent':
-            if config.SOCIAL_POOL != 1:
-                raise ValueError(f"SOCIAL_POOL must be equal to 1")
-
-            selected_individuals = [parent]
-        elif config.INHERIT_TYPE == 'best':
-            selected_individuals = archive.get_best(config.SOCIAL_POOL)
-        elif config.INHERIT_TYPE == 'random':
-            selected_individuals = archive.get_random(config.SOCIAL_POOL, rng)
-        elif config.INHERIT_TYPE == 'similar':
-            selected_individuals = archive.get_most_similar(self, config.SOCIAL_POOL)
         elif config.INHERIT_TYPE == 'cell':
+            if archive is None:
+                raise ValueError("Invalid INHERIT TYPE: cell. Archive is none.")
             if config.SOCIAL_POOL != 1:
-                raise ValueError(f"SOCIAL_POOL must be equal to 1")
+                raise ValueError("SOCIAL_POOL must be equal to 1")
 
             archive_similar = archive.get_from_cell(self)
             if archive_similar is None:
@@ -109,6 +91,7 @@ class Individual:
             raise ValueError(f"Unknown INHERIT TYPE: {config.INHERIT_TYPE}")
 
         self.do_the_inherit(selected_individuals)
+
 
     @staticmethod
     def hamming_distance(A, B):

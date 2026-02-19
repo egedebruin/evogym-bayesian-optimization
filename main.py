@@ -32,18 +32,18 @@ def run_generation(individuals, heights, rng):
 		i += 1
 	return new_population, new_heights
 
-def get_offspring(population, generation_index, parent_selection, rng:np.random.Generator):
+def get_offspring(population, generation_index, parent_selection, rng:np.random.Generator, archive=None):
 	selected_individuals = parent_selection.select(population, rng)
 	offspring = []
 	for i, individual in enumerate(selected_individuals):
 		new_individual = individual.generate_new_individual(generation_index, i, rng)
-		new_individual.inherit_experience(population, individual, rng)
+		new_individual.inherit_experience(population, individual, rng, archive)
 		offspring.append(new_individual)
 	return offspring
 
 def get_offspring_from_archive(archive: Archive, generation_index, parent_selection, rng:np.random.Generator):
 	all_individuals = archive.get_all_individuals()
-	return get_offspring(all_individuals, generation_index, parent_selection, rng)
+	return get_offspring(all_individuals, generation_index, parent_selection, rng, archive)
 
 
 def calculate_generations():
