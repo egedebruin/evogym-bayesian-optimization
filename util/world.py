@@ -176,7 +176,7 @@ def calculate_objective_value(start_position, end_position, extra_metrics, gener
     if config.ENVIRONMENT in ['simple', 'rugged', 'steps', 'random', 'changing', 'randomsteps', 'ceiling']:
         return np.mean(end_position[0]) - np.mean(start_position[0])
     elif config.ENVIRONMENT in ['bidirectional', 'bidirectional2']:
-        if generation_index % 2 == 0:
+        if (generation_index // 50) % 2 == 0:
             return np.mean(end_position[0]) - np.mean(start_position[0])
         return np.mean(start_position[0]) - np.mean(end_position[0])
     elif config.ENVIRONMENT == 'climb':
