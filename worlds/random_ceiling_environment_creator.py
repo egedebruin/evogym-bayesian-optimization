@@ -14,8 +14,11 @@ def make(obstacle_height, ceiling_height):
     ceiling_heights = []
     ceiling_types = []
     for i in range(length):
-        ceiling_heights.append(ceiling_height)
-        if i % 10 == 0 or i == length - 1:
+        current_ceiling_height = ceiling_height
+        if i < 9:
+            current_ceiling_height = ceiling_height + 9 - i
+        ceiling_heights.append(current_ceiling_height)
+        if i % 10 == 0 or i == length - 1 or i < 10:
             ceiling_types.append(5)
         else:
             ceiling_types.append(2)
