@@ -9,4 +9,6 @@ Optimizing the body and brain of a robot is a coupled challenge: the morphology 
     In addition, while the optimal teacher selection strategy remains open, our findings suggest that incorporating knowledge from multiple teachers can yield more consistent and robust improvements.
 
 ## Data
-Videos of a selection of the best agents can be found in the following directory: `results/gecco2026/videos`. 
+Videos of a selection of the best agents can be found in the following directory: `results/gecco2026/videos`.
+
+Data can be downloaded [here](https://doi.org/10.18710/7BR3NZ).
