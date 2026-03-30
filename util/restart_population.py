@@ -58,3 +58,9 @@ def get_rng():
     rng = np.random.Generator(np.random.PCG64())
     rng.bit_generator.state = loaded_state
     return rng
+
+def get_heights():
+    with open(config.FOLDER + "environments.txt", "r") as f:
+        generations = f.read().splitlines()
+    final_heights = [int(height) for height in generations[-1].split(";")]
+    return final_heights

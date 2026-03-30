@@ -24,6 +24,8 @@ from util.logger_setup import logger, logger_setup
 def run_generation(individuals, heights, rng):
 	new_population = []
 	results, new_heights = learn.learn_individuals(individuals, heights, rng)
+	if config.ENVIRONMENT in ['changing', 'random']:
+		writer.write_to_environments_file(";".join(str(e) for e in new_heights))
 	i = 0
 	for (objective_value, best_brain, experience, best_inherited_objective_value, individual) in results:
 		individual.add_evaluation(objective_value, best_brain, experience, best_inherited_objective_value)
@@ -68,10 +70,9 @@ def main():
 	heights = []
 	archive = None
 	if os.path.exists(config.FOLDER + "populations.txt"):
-		if config.ENVIRONMENT == 'changing':
-			logger.error("Restart is not working due to: Heights")
-			exit()
 		logger.info("Restarting populations...")
+		if config.ENVIRONMENT == 'changing':
+			heights = restart_population.get_heights()
 		population, num_generations = restart_population.get_population()
 		rng = restart_population.get_rng()
 		if config.MAP_ELITES:

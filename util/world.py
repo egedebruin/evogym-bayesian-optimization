@@ -121,9 +121,6 @@ def get_environment(rng, previous_heights=None, generation_index=None):
         else:
             contents, heights = random_environment_creator.change(rng, previous_heights)
 
-        if config.WRITE_RANDOM_ENV:
-            writer.write_to_environments_file(";".join(str(e) for e in heights))
-
         world = create_random_file(contents)
     else:
         raise ValueError(f"Environment {config.ENVIRONMENT} does not exist.")
