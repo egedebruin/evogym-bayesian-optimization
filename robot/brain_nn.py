@@ -1,4 +1,5 @@
 import ast
+import math
 
 import numpy as np
 
@@ -7,7 +8,7 @@ from robot.brain import Brain
 
 
 class BrainNN(Brain):
-    NUMBER_OF_INPUT_NEURONS = 30
+    NUMBER_OF_INPUT_NEURONS = int(3 * math.pow(2 * config.MODULAR_NEIGHBOUR_VISION + 1, 2) + 3)
     NUMBER_OF_HIDDEN_NEURONS = 10
     NUMBER_OF_OUTPUT_NEURONS = 1
     

@@ -89,8 +89,13 @@ class Sensors:
         voxel_sizes = []
         voxel_velocities = []
         actuator_x, actuator_y = (actuator_index // config.GRID_LENGTH, actuator_index % config.GRID_LENGTH)
-        for x_neighbor in [-1, 0, 1]:
-            for y_neighbor in [-1, 0, 1]:
+        neighbors = [0]
+        for i in range(1, config.MODULAR_NEIGHBOUR_VISION + 1):
+            neighbors.append(i)
+            neighbors.append(-i)
+        neighbors.sort()
+        for x_neighbor in neighbors:
+            for y_neighbor in neighbors:
                 voxel_size, voxel_velocity_x, voxel_velocity_y = self._get_input_from_neighbor(
                     actuator_x + x_neighbor,
                     actuator_y + y_neighbor,
