@@ -5,6 +5,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from reinforcement_learning.rl import RL
+from robot.brain_nn import BrainNN
 
 
 class DDPG(RL):
@@ -70,6 +71,8 @@ class DDPG(RL):
         return raw_action
 
     def get_input_size(self, num_actuators, policy_input, policy_output):
+        if BrainNN.GLOBAL_CONTROLLER:
+            return policy_input + policy_output
         return num_actuators * (policy_input + policy_output)
 
     def update(self, policy_weights, buffer):

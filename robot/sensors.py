@@ -5,6 +5,7 @@ from typing import Any
 import numpy as np
 
 from configs import config
+from robot.brain_nn import BrainNN
 from robot.touch_sensor_util import detect_ground_contact
 
 class Sensors:
@@ -42,6 +43,8 @@ class Sensors:
                             self.sensor_grid_to_sensor_index[(x_voxel + dx, y_voxel + dy)])
 
     def get_input_from_sensors(self, sim, generation_index):
+        if BrainNN.GLOBAL_CONTROLLER:
+            return self.get_global_input_from_sensors(sim, generation_index)
         robot_positions = sim.object_pos_at_time(sim.get_time(), 'robot')
         robot_velocities = sim.object_vel_at_time(sim.get_time(), 'robot')
         robot_actuator_indices = sim.get_actuator_indices('robot')
@@ -85,13 +88,66 @@ class Sensors:
 
         return input_vectors
 
+    def get_global_input_from_sensors(self, sim, generation_index):
+        robot_positions = sim.object_pos_at_time(sim.get_time(), 'robot')
+        robot_velocities = sim.object_vel_at_time(sim.get_time(), 'robot')
+        ground_positions = sim.object_pos_at_time(sim.get_time(), 'ground')
+        current_time = sim.get_time()
+
+        input_vectors = []
+        package_inputs = []
+        sensor_input = np.array([])
+        for x in range(config.GRID_LENGTH):
+            for y in range(config.GRID_LENGTH):
+                voxel_size, voxel_velocity_x, voxel_velocity_y = self._get_input_from_voxel(x, y, robot_positions, robot_velocities)
+                voxel_input = np.array([voxel_size, voxel_velocity_x, voxel_velocity_y])
+                sensor_input = np.concatenate((sensor_input, voxel_input))
+
+                contact = detect_ground_contact(robot_positions, ground_positions, self.voxel_index_to_sensor_index, [x * config.GRID_LENGTH + y])
+                sensor_input = np.concatenate((sensor_input, [1.0 if contact else 0.0]))
+
+                if config.ENVIRONMENT == 'carry' or config.ENVIRONMENT == 'catch':
+                    # Distance-to-package sensor
+                    package_positions = sim.object_pos_at_time(sim.get_time(), 'package')
+                    package_input = self._get_input_package(x * config.GRID_LENGTH + y, robot_positions, package_positions)
+                    package_inputs.append(package_input)
+
+        if config.ENVIRONMENT == 'carry' or config.ENVIRONMENT == 'catch':
+            min_x = math.inf
+            min_y = math.inf
+            for package_input in package_inputs:
+                if abs(package_input[0]) < abs(min_x):
+                    min_x = package_input[0]
+                if abs(package_input[1]) < abs(min_y):
+                    min_y = package_input[1]
+            sensor_input = np.concatenate((sensor_input, [min_x, min_y]))
+
+        if config.ENVIRONMENT == 'bidirectional2':
+            if generation_index % 2 == 0:
+                sensor_input = np.concatenate((sensor_input, [1.0]))
+            else:
+                sensor_input = np.concatenate((sensor_input, [0.0]))
+
+        # Time sensor
+        # Cyclic input: map 0..25 → 0..2π
+        cyc = current_time % 25  # gives 0..25
+        theta = 2 * np.pi * cyc / 25  # normalize to 0..2π
+
+        cyc_sin = np.sin(theta)
+        cyc_cos = np.cos(theta)
+
+        # Append to your input vector
+        input_vectors.append(np.concatenate((sensor_input, [cyc_sin, cyc_cos])))
+
+        return input_vectors
+
     def _get_input_actuator(self, actuator_index, robot_positions, robot_velocities):
         voxel_sizes = []
         voxel_velocities = []
         actuator_x, actuator_y = (actuator_index // config.GRID_LENGTH, actuator_index % config.GRID_LENGTH)
         for x_neighbor in [-1, 0, 1]:
             for y_neighbor in [-1, 0, 1]:
-                voxel_size, voxel_velocity_x, voxel_velocity_y = self._get_input_from_neighbor(
+                voxel_size, voxel_velocity_x, voxel_velocity_y = self._get_input_from_voxel(
                     actuator_x + x_neighbor,
                     actuator_y + y_neighbor,
                     robot_positions,
@@ -119,14 +175,14 @@ class Sensors:
                     minimum_y_distance = y_distance
         return np.array([minimum_x_distance, minimum_y_distance])
 
-    def _get_input_from_neighbor(self, neighbor_x, neighbor_y, positions, velocities):
-        neighbor_index = neighbor_x * config.GRID_LENGTH + neighbor_y
-        if (neighbor_x < 0 or neighbor_x >= config.GRID_LENGTH or
-                neighbor_y < 0 or neighbor_y >= config.GRID_LENGTH or
-                neighbor_index not in self.voxel_index_to_sensor_index.keys()):
+    def _get_input_from_voxel(self, x, y, positions, velocities):
+        index = x * config.GRID_LENGTH + y
+        if (x < 0 or x >= config.GRID_LENGTH or
+                y < 0 or y >= config.GRID_LENGTH or
+                index not in self.voxel_index_to_sensor_index.keys()):
             return 0, 0, 0
 
-        sensor_indices = self.voxel_index_to_sensor_index[neighbor_index]
+        sensor_indices = self.voxel_index_to_sensor_index[index]
         corners = []
         velocities_x = []
         velocities_y = []

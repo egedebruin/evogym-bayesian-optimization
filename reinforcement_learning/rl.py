@@ -30,9 +30,8 @@ class RL(ABC, nn.Module):
         self.do_update_critic = False
         self.do_update_norm = True
 
-        args = self.create_global_critic_params(num_actuators)
         args = {k: torch.nn.Parameter(torch.tensor(v, dtype=torch.float32))
-                for k, v in args.items()}
+                for k, v in self.create_critic_params(num_actuators).items()}
         self.policy_optimizer = None
         self.critic_optimizer = None
         self.set_critic_parameters(args)
@@ -83,11 +82,14 @@ class RL(ABC, nn.Module):
         self.do_update_critic = update_critic
         self.do_update_policy = update_policy
 
-    def create_global_critic_params(self, num_actuators):
-        input_dim = BrainNN.NUMBER_OF_INPUT_NEURONS
+    def create_critic_params(self, num_actuators):
+        policy_input_dim = BrainNN.NUMBER_OF_INPUT_NEURONS
         hidden_dim1 = 128  # first hidden layer
         hidden_dim2 = 64  # second hidden layer
-        output_dim = 1  # Q-value
+        policy_output_dim = 1  # Q-value
+        if BrainNN.GLOBAL_CONTROLLER:
+            policy_output_dim = 25
+        output_dim = 1 # Q-value
 
         def rand_list(shape, low, high):
             return [[random.uniform(low, high) for _ in range(shape[1])] for _ in range(shape[0])] \
@@ -95,7 +97,7 @@ class RL(ABC, nn.Module):
 
         params = {
             # first layer
-            'critic_hidden_weights': rand_list((self.get_input_size(num_actuators, input_dim, output_dim), hidden_dim1), -0.1, 0.1),
+            'critic_hidden_weights': rand_list((self.get_input_size(num_actuators, policy_input_dim, policy_output_dim), hidden_dim1), -0.1, 0.1),
             'critic_hidden_biases': rand_list((hidden_dim1,), -0.01, 0.01),
 
             # second layer

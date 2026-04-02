@@ -66,6 +66,8 @@ def main():
 		os.makedirs(config.FOLDER)
 	logger_setup()
 	set_number_of_sensors()
+	if config.GLOBAL_CONTROLLER:
+		BrainNN.make_global()
 
 	heights = []
 	archive = None
