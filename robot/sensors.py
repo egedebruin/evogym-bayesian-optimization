@@ -158,6 +158,8 @@ class Sensors:
         return np.array(voxel_sizes + voxel_velocities)
 
     def _get_input_package(self, actuator_index, robot_positions, package_positions):
+        if actuator_index not in self.voxel_index_to_sensor_index.keys():
+            return np.array([math.inf, math.inf])
         sensor_indices = self.voxel_index_to_sensor_index[actuator_index]
         minimum_x_distance = math.inf
         minimum_y_distance = math.inf
