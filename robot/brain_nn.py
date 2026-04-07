@@ -113,6 +113,6 @@ class BrainNN(Brain):
     @staticmethod
     def make_global():
         BrainNN.GLOBAL_CONTROLLER = True
-        BrainNN.NUMBER_OF_INPUT_NEURONS = 72 + BrainNN.NUMBER_OF_INPUT_NEURONS # TODO: One-hot coded vector for material
+        BrainNN.NUMBER_OF_INPUT_NEURONS = 102 # TODO: One-hot coded vector for material
         BrainNN.NUMBER_OF_HIDDEN_NEURONS = 32
         BrainNN.NUMBER_OF_OUTPUT_NEURONS = 25

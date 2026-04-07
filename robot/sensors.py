@@ -42,104 +42,118 @@ class Sensors:
                         self.voxel_index_to_sensor_index[x_voxel * config.GRID_LENGTH + y_voxel].append(
                             self.sensor_grid_to_sensor_index[(x_voxel + dx, y_voxel + dy)])
 
+    def _get_time_features(self, current_time):
+        cyc = current_time % 25
+        theta = 2 * np.pi * cyc / 25
+        return [np.sin(theta), np.cos(theta)]
+
+    def _get_env_flag(self, generation_index):
+        if config.ENVIRONMENT == 'bidirectional2':
+            return [1.0 if generation_index % 2 == 0 else 0.0]
+        return []
+
+    def _needs_package(self):
+        return config.ENVIRONMENT in ('carry', 'catch')
+
     def get_input_from_sensors(self, sim, generation_index):
         if BrainNN.GLOBAL_CONTROLLER:
             return self.get_global_input_from_sensors(sim, generation_index)
-        robot_positions = sim.object_pos_at_time(sim.get_time(), 'robot')
-        robot_velocities = sim.object_vel_at_time(sim.get_time(), 'robot')
-        robot_actuator_indices = sim.get_actuator_indices('robot')
-        ground_positions = sim.object_pos_at_time(sim.get_time(), 'ground')
+
         current_time = sim.get_time()
+        robot_positions = sim.object_pos_at_time(current_time, 'robot')
+        robot_velocities = sim.object_vel_at_time(current_time, 'robot')
+        ground_positions = sim.object_pos_at_time(current_time, 'ground')
+        actuator_indices = sim.get_actuator_indices('robot')
+
+        package_positions = None
+        if self._needs_package():
+            package_positions = sim.object_pos_at_time(current_time, 'package')
 
         input_vectors = []
-        for actuator_index in robot_actuator_indices:
-            sensor_input = np.array([])
 
-            # Size-and-speed sensors
-            actuator_input = self._get_input_actuator(actuator_index, robot_positions, robot_velocities)
-            sensor_input = np.concatenate((sensor_input, actuator_input))
+        for actuator_index in actuator_indices:
+            features = []
 
-            # Ground-touch sensor
-            contact = detect_ground_contact(robot_positions, ground_positions, self.voxel_index_to_sensor_index, [actuator_index])
-            sensor_input = np.concatenate((sensor_input, [1.0 if contact else 0.0]))
+            # Actuator features
+            features.extend(
+                self._get_input_actuator(actuator_index, robot_positions, robot_velocities)
+            )
 
-            if config.ENVIRONMENT == 'carry' or config.ENVIRONMENT == 'catch':
-                # Distance-to-package sensor
-                package_positions = sim.object_pos_at_time(sim.get_time(), 'package')
-                package_input = self._get_input_package(actuator_index, robot_positions, package_positions)
-                sensor_input = np.concatenate((sensor_input, package_input))
+            # Ground contact
+            contact = detect_ground_contact(
+                robot_positions, ground_positions,
+                self.voxel_index_to_sensor_index,
+                [actuator_index]
+            )
+            features.append(1.0 if contact else 0.0)
 
-            if config.ENVIRONMENT == 'bidirectional2':
-                if generation_index % 2 == 0:
-                    sensor_input = np.concatenate((sensor_input, [1.0]))
-                else:
-                    sensor_input = np.concatenate((sensor_input, [0.0]))
+            # Package features
+            if package_positions is not None:
+                features.extend(
+                    self._get_input_package(actuator_index, robot_positions, package_positions)
+                )
 
-            # Time sensor
-            # Cyclic input: map 0..25 → 0..2π
-            cyc = current_time % 25  # gives 0..25
-            theta = 2 * np.pi * cyc / 25  # normalize to 0..2π
+            # Environment flag
+            features.extend(self._get_env_flag(generation_index))
 
-            cyc_sin = np.sin(theta)
-            cyc_cos = np.cos(theta)
+            # Time features
+            features.extend(self._get_time_features(current_time))
 
-            # Append to your input vector
-            input_vectors.append(np.concatenate((sensor_input, [cyc_sin, cyc_cos])))
+            input_vectors.append(np.array(features))
 
         return input_vectors
 
     def get_global_input_from_sensors(self, sim, generation_index):
-        robot_positions = sim.object_pos_at_time(sim.get_time(), 'robot')
-        robot_velocities = sim.object_vel_at_time(sim.get_time(), 'robot')
-        ground_positions = sim.object_pos_at_time(sim.get_time(), 'ground')
         current_time = sim.get_time()
+        robot_positions = sim.object_pos_at_time(current_time, 'robot')
+        robot_velocities = sim.object_vel_at_time(current_time, 'robot')
+        ground_positions = sim.object_pos_at_time(current_time, 'ground')
 
-        input_vectors = []
+        package_positions = None
+        if self._needs_package():
+            package_positions = sim.object_pos_at_time(current_time, 'package')
+
+        features = []
         package_inputs = []
-        sensor_input = np.array([])
+
         for x in range(config.GRID_LENGTH):
             for y in range(config.GRID_LENGTH):
-                voxel_size, voxel_velocity_x, voxel_velocity_y = self._get_input_from_voxel(x, y, robot_positions, robot_velocities)
-                voxel_input = np.array([voxel_size, voxel_velocity_x, voxel_velocity_y])
-                sensor_input = np.concatenate((sensor_input, voxel_input))
+                idx = x * config.GRID_LENGTH + y
 
-                contact = detect_ground_contact(robot_positions, ground_positions, self.voxel_index_to_sensor_index, [x * config.GRID_LENGTH + y])
-                sensor_input = np.concatenate((sensor_input, [1.0 if contact else 0.0]))
+                # Voxel features
+                voxel_input = self._get_input_from_voxel(
+                    x, y, robot_positions, robot_velocities
+                )
+                features.extend(voxel_input)
 
-                if config.ENVIRONMENT == 'carry' or config.ENVIRONMENT == 'catch':
-                    # Distance-to-package sensor
-                    package_positions = sim.object_pos_at_time(sim.get_time(), 'package')
-                    package_input = self._get_input_package(x * config.GRID_LENGTH + y, robot_positions, package_positions)
+                # Ground contact
+                contact = detect_ground_contact(
+                    robot_positions, ground_positions,
+                    self.voxel_index_to_sensor_index,
+                    [idx]
+                )
+                features.append(1.0 if contact else 0.0)
+
+                # Package features (collected for later aggregation)
+                if package_positions is not None:
+                    package_input = self._get_input_package(
+                        idx, robot_positions, package_positions
+                    )
                     package_inputs.append(package_input)
 
-        if config.ENVIRONMENT == 'carry' or config.ENVIRONMENT == 'catch':
-            min_x = math.inf
-            min_y = math.inf
-            for package_input in package_inputs:
-                if abs(package_input[0]) < abs(min_x):
-                    min_x = package_input[0]
-                if abs(package_input[1]) < abs(min_y):
-                    min_y = package_input[1]
-            sensor_input = np.concatenate((sensor_input, [min_x, min_y]))
+        # Aggregate package info
+        if package_inputs:
+            min_x = min(package_inputs, key=lambda p: abs(p[0]))[0]
+            min_y = min(package_inputs, key=lambda p: abs(p[1]))[1]
+            features.extend([min_x, min_y])
 
-        if config.ENVIRONMENT == 'bidirectional2':
-            if generation_index % 2 == 0:
-                sensor_input = np.concatenate((sensor_input, [1.0]))
-            else:
-                sensor_input = np.concatenate((sensor_input, [0.0]))
+        # Environment flag
+        features.extend(self._get_env_flag(generation_index))
 
-        # Time sensor
-        # Cyclic input: map 0..25 → 0..2π
-        cyc = current_time % 25  # gives 0..25
-        theta = 2 * np.pi * cyc / 25  # normalize to 0..2π
+        # Time features
+        features.extend(self._get_time_features(current_time))
 
-        cyc_sin = np.sin(theta)
-        cyc_cos = np.cos(theta)
-
-        # Append to your input vector
-        input_vectors.append(np.concatenate((sensor_input, [cyc_sin, cyc_cos])))
-
-        return input_vectors
+        return [np.array(features)]
 
     def _get_input_actuator(self, actuator_index, robot_positions, robot_velocities):
         voxel_sizes = []
