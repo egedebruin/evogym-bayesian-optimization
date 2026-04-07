@@ -7,6 +7,7 @@ import os
 from evogym import EvoWorld, EvoSim, EvoViewer, utils, WorldObject
 
 from configs import config
+from robot.brain_nn import BrainNN
 from util import writer
 from worlds import random_environment_creator, random_steps_environment_creator, random_ceiling_environment_creator
 
@@ -55,6 +56,9 @@ def run_simulator(sim, controller, sensors, viewer, simulator_length, headless, 
 
             raw_action = controller.control(normalized_sensor_input)
             adjusted_action = raw_action + 0.6
+
+            if BrainNN.GLOBAL_CONTROLLER:
+                adjusted_action = adjusted_action[:, sim.get_actuator_indices('robot')]
 
             sim.set_action('robot', adjusted_action)
 

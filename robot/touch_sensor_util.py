@@ -14,6 +14,8 @@ def detect_ground_contact(
     current_ground = _extract_local_ground(robot, ground, side)
     for actuator_index in actuator_indices:
         voxel_corner_masses = []
+        if actuator_index not in voxel_index_to_sensor_index:
+            continue
         for sensor_index in voxel_index_to_sensor_index[actuator_index]:
             voxel_corner_masses.append((robot[0][sensor_index], robot[1][sensor_index]))
         if _detect_ground_contact_voxel(np.asarray(voxel_corner_masses).transpose(), current_ground, side, offset):

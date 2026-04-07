@@ -11,6 +11,7 @@ class BrainNN(Brain):
     NUMBER_OF_INPUT_NEURONS = int(3 * math.pow(2 * config.MODULAR_NEIGHBOUR_VISION + 1, 2) + 3)
     NUMBER_OF_HIDDEN_NEURONS = 10
     NUMBER_OF_OUTPUT_NEURONS = 1
+    GLOBAL_CONTROLLER = False
     
     weights: dict
     biases: dict
@@ -108,3 +109,10 @@ class BrainNN(Brain):
                 next_point[f'output_{position_0}_{position_1}'] = adjusted_value
 
         return next_point
+
+    @staticmethod
+    def make_global():
+        BrainNN.GLOBAL_CONTROLLER = True
+        BrainNN.NUMBER_OF_INPUT_NEURONS = 72 + BrainNN.NUMBER_OF_INPUT_NEURONS # TODO: One-hot coded vector for material
+        BrainNN.NUMBER_OF_HIDDEN_NEURONS = 32
+        BrainNN.NUMBER_OF_OUTPUT_NEURONS = 25
