@@ -27,6 +27,8 @@ def read_args():
 	parser.add_argument('--min-steps', help='Min steps in randomstep environment', required=False, type=int)
 	parser.add_argument('--max-steps', help='Max steps in randomstep environment', required=False,
 						type=int)
+	parser.add_argument('--global-controller', help='Use the global controller instead of the local controller', required=False, type=int)
+	parser.add_argument('--neighbour-vision', help='Number of voxels a voxel sees in modular controler', required=False, type=int)
 
 	args = parser.parse_args()
 	config.LEARN_ITERATIONS = args.learn
@@ -59,6 +61,12 @@ def read_args():
 	if args.min_steps and args.max_steps:
 		config.STEPS_CHANGE_DEGREE = [args.min_steps, args.max_steps]
 		extra += "_stepsinterval-" + str(args.min_steps) + "," + str(args.max_steps)
+	if args.global_controller:
+		config.GLOBAL_CONTROLLER = args.global_controller == 1
+		extra += "_global-" + str(args.global_controller)
+	if args.neighbour_vision:
+		config.MODULAR_NEIGHBOUR_VISION = args.neighbour_vision
+		extra += "_vision-" + str(args.neighbour_vision)
 	if args.bo_restarts:
 		config.BO_RESTARTS = args.bo_restarts
 	else:
