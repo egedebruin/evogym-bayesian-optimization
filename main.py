@@ -27,8 +27,8 @@ def run_generation(individuals, heights, rng):
 	if config.ENVIRONMENT in ['changing', 'random']:
 		writer.write_to_environments_file(";".join(str(e) for e in new_heights))
 	i = 0
-	for (objective_value, best_brain, experience, best_inherited_objective_value, individual) in results:
-		individual.add_evaluation(objective_value, best_brain, experience, best_inherited_objective_value)
+	for (experience, inherited_objective_values, individual) in results:
+		individual.add_evaluation(experience, inherited_objective_values)
 		new_population.append(individual)
 		writer.write_to_individuals_file(individual)
 		i += 1

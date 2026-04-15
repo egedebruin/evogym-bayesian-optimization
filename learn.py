@@ -75,10 +75,9 @@ def learn(individual, rng, current_world):
 			optimizer.register(params=experience_sample, target=objective_value)
 			optimizer.set_gp_params(alpha=alphas)
 
-	objective_value = -math.inf
 	best_brain = None
 	previous_policy = None
-	best_inherited_objective_value = -math.inf
+	inherited_objective_values = []
 	experience = []
 	transition_buffer = deque(maxlen=2000)
 	for iteration in range(config.LEARN_ITERATIONS):
@@ -122,13 +121,9 @@ def learn(individual, rng, current_world):
 		sensors = Sensors(robot_body.grid)
 
 		result = world.run_simulator(sim, controller, sensors, viewer, config.SIMULATION_LENGTH, True, individual.original_generation, transition_buffer)
-		if result > objective_value:
-			objective_value = result
-			best_brain = next_point
-			if iteration < config.INHERIT_SAMPLES and len(inherited_experience) > 0:
-				best_inherited_objective_value = result
-			if iteration == 0 and config.INHERIT_SAMPLES == -1:
-				best_inherited_objective_value = result
+
+		if (iteration < config.INHERIT_SAMPLES and len(inherited_experience) > 0) or (iteration == 0 and config.INHERIT_SAMPLES == -1):
+			inherited_objective_values.append(result)
 
 		if config.LEARN_METHOD == TYPE_BO and not config.RANDOM_LEARNING:
 			alphas = np.append(alphas, config.LEARN_ALPHA)
@@ -138,7 +133,7 @@ def learn(individual, rng, current_world):
 		previous_policy = controller.policy_weights
 	sim.reset()
 	viewer.close()
-	return objective_value, best_brain, experience, best_inherited_objective_value, individual
+	return experience, inherited_objective_values, individual
 
 def get_next_point_from_inheritance(iteration, optimizer, brain, actuator_indices, inherited_experience):
 	if iteration == 0 and config.INHERIT_SAMPLES == -1 and config.DARWINIAN:
