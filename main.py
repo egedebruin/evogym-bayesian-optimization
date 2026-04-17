@@ -67,7 +67,8 @@ def main():
 	logger_setup()
 	if config.GLOBAL_CONTROLLER:
 		BrainNN.make_global()
-	BrainNN.set_modular_vision()
+	else:
+		BrainNN.set_modular_vision()
 	set_number_of_sensors()
 
 	heights = []
