@@ -61,10 +61,10 @@ def read_args():
 	if args.min_steps and args.max_steps:
 		config.STEPS_CHANGE_DEGREE = [args.min_steps, args.max_steps]
 		extra += "_stepsinterval-" + str(args.min_steps) + "," + str(args.max_steps)
-	if args.global_controller:
+	if args.global_controller is not None:
 		config.GLOBAL_CONTROLLER = args.global_controller == 1
 		extra += "_global-" + str(args.global_controller)
-	if args.neighbour_vision:
+	if args.neighbour_vision is not None:
 		config.MODULAR_NEIGHBOUR_VISION = args.neighbour_vision
 		extra += "_vision-" + str(args.neighbour_vision)
 	if args.bo_restarts:

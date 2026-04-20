@@ -1,3 +1,5 @@
+import math
+
 import numpy as np
 import torch
 import torch.nn.functional as F
@@ -23,9 +25,16 @@ class ControllerNN(Controller):
         }
 
         self.rl_agent = None
-        self.velocity_indices = list(range(9, 27))
+
+        if config.GLOBAL_CONTROLLER:
+            self.velocity_indices = [4*i + j for i in range(25) for j in (1, 2)]
+            self.package_indices = [100, 101]
+        else:
+            block_size = (2 * config.MODULAR_NEIGHBOUR_VISION + 1) ** 2
+            self.velocity_indices = list(range(block_size, 3 * block_size))
+            self.package_indices = list(range(3 * block_size + 3, 3 * block_size + 5))
+
         self.velocity_norm = RunningNorm(0.0, 100.0, 'tanh')
-        self.package_indices = list(range(30, 32))
         self.package_norm = RunningNorm(0.0, 1.0, 'tanh')
 
     def set_rl_agent(self, rl_agent):
