@@ -76,16 +76,8 @@ class Sensors:
 
             # Actuator features
             features.extend(
-                self._get_input_actuator(actuator_index, robot_positions, robot_velocities)
+                self._get_input_actuator(actuator_index, robot_positions, robot_velocities, ground_positions)
             )
-
-            # Ground contact
-            contact = detect_ground_contact(
-                robot_positions, ground_positions,
-                self.voxel_index_to_sensor_index,
-                [actuator_index]
-            )
-            features.append(1.0 if contact else 0.0)
 
             # Package features
             if package_positions is not None:
@@ -155,9 +147,10 @@ class Sensors:
 
         return [np.array(features)]
 
-    def _get_input_actuator(self, actuator_index, robot_positions, robot_velocities):
+    def _get_input_actuator(self, actuator_index, robot_positions, robot_velocities, ground_positions):
         voxel_sizes = []
         voxel_velocities = []
+        voxel_contacts = []
         actuator_x, actuator_y = (actuator_index // config.GRID_LENGTH, actuator_index % config.GRID_LENGTH)
         neighbors = [0]
         for i in range(1, config.MODULAR_NEIGHBOUR_VISION + 1):
@@ -171,10 +164,17 @@ class Sensors:
                     actuator_y + y_neighbor,
                     robot_positions,
                     robot_velocities)
+                contact = detect_ground_contact(
+                    robot_positions, ground_positions,
+                    self.voxel_index_to_sensor_index,
+                    [(actuator_x + x_neighbor) * config.GRID_LENGTH + (actuator_y + y_neighbor)]
+                )
+                voxel_contact = 1.0 if contact else 0.0
                 voxel_sizes.append(voxel_size)
                 voxel_velocities.append(voxel_velocity_x)
                 voxel_velocities.append(voxel_velocity_y)
-        return np.array(voxel_sizes + voxel_velocities)
+                voxel_contacts.append(voxel_contact)
+        return np.array(voxel_sizes + voxel_velocities + voxel_contacts)
 
     def _get_input_package(self, actuator_index, robot_positions, package_positions):
         if actuator_index not in self.voxel_index_to_sensor_index.keys():
