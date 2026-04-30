@@ -119,4 +119,7 @@ class BrainNN(Brain):
 
     @staticmethod
     def set_modular_vision():
+        BrainNN.GLOBAL_CONTROLLER = False
         BrainNN.NUMBER_OF_INPUT_NEURONS = int(3 * math.pow(2 * config.MODULAR_NEIGHBOUR_VISION + 1, 2) + 3)
+        BrainNN.NUMBER_OF_HIDDEN_NEURONS = 10
+        BrainNN.NUMBER_OF_OUTPUT_NEURONS = 1
