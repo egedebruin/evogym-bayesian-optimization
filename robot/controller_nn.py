@@ -32,7 +32,7 @@ class ControllerNN(Controller):
         else:
             block_size = (2 * config.MODULAR_NEIGHBOUR_VISION + 1) ** 2
             self.velocity_indices = list(range(block_size, 3 * block_size))
-            self.package_indices = list(range(3 * block_size + 3, 3 * block_size + 5))
+            self.package_indices = list(range(4 * block_size, 4 * block_size + 2))
 
         self.velocity_norm = RunningNorm(0.0, 100.0, 'tanh')
         self.package_norm = RunningNorm(0.0, 1.0, 'tanh')
