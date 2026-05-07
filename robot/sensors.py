@@ -126,6 +126,9 @@ class Sensors:
                 )
                 features.append(1.0 if contact else 0.0)
 
+                # Voxel type
+                features.extend(self._get_voxel_type(x, y))
+
                 # Package features (collected for later aggregation)
                 if package_positions is not None:
                     package_input = self._get_input_package(
@@ -151,6 +154,7 @@ class Sensors:
         voxel_sizes = []
         voxel_velocities = []
         voxel_contacts = []
+        voxel_types = []
         actuator_x, actuator_y = (actuator_index // config.GRID_LENGTH, actuator_index % config.GRID_LENGTH)
         neighbors = [0]
         for i in range(1, config.MODULAR_NEIGHBOUR_VISION + 1):
@@ -174,7 +178,8 @@ class Sensors:
                 voxel_velocities.append(voxel_velocity_x)
                 voxel_velocities.append(voxel_velocity_y)
                 voxel_contacts.append(voxel_contact)
-        return np.array(voxel_sizes + voxel_velocities + voxel_contacts)
+                voxel_types.extend(self._get_voxel_type(actuator_x + x_neighbor, actuator_y + y_neighbor))
+        return np.array(voxel_sizes + voxel_velocities + voxel_contacts + voxel_types)
 
     def _get_input_package(self, actuator_index, robot_positions, package_positions):
         if actuator_index not in self.voxel_index_to_sensor_index.keys():
@@ -215,6 +220,12 @@ class Sensors:
         return (Sensors.rectangle_size(corners),
                 sum(velocities_x) / len(velocities_x),
                 sum(velocities_y) / len(velocities_y))
+
+    def _get_voxel_type(self, x, y):
+        if (x < 0 or x >= config.GRID_LENGTH or
+                y < 0 or y >= config.GRID_LENGTH):
+            return [0.0, 0.0, 0.0, 0.0]
+        return [1.0 if self.robot_structure[x, y] == t else 0.0 for t in (1.0, 2.0, 3.0, 4.0)]
 
     @staticmethod
     def distance(p1, p2):

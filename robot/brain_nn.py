@@ -113,13 +113,13 @@ class BrainNN(Brain):
     @staticmethod
     def make_global():
         BrainNN.GLOBAL_CONTROLLER = True
-        BrainNN.NUMBER_OF_INPUT_NEURONS = 102 # TODO: One-hot coded vector for material
-        BrainNN.NUMBER_OF_HIDDEN_NEURONS = 32
+        BrainNN.NUMBER_OF_INPUT_NEURONS = 202
+        BrainNN.NUMBER_OF_HIDDEN_NEURONS = 36
         BrainNN.NUMBER_OF_OUTPUT_NEURONS = 25
 
     @staticmethod
     def set_modular_vision():
         BrainNN.GLOBAL_CONTROLLER = False
-        BrainNN.NUMBER_OF_INPUT_NEURONS = int(4 * math.pow(2 * config.MODULAR_NEIGHBOUR_VISION + 1, 2) + 2)
-        BrainNN.NUMBER_OF_HIDDEN_NEURONS = int(0.4 * BrainNN.NUMBER_OF_INPUT_NEURONS)
+        BrainNN.NUMBER_OF_INPUT_NEURONS = int(8 * math.pow(2 * config.MODULAR_NEIGHBOUR_VISION + 1, 2) + 2)
+        BrainNN.NUMBER_OF_HIDDEN_NEURONS = int(0.2 * BrainNN.NUMBER_OF_INPUT_NEURONS)
         BrainNN.NUMBER_OF_OUTPUT_NEURONS = 1
