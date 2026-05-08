@@ -71,9 +71,10 @@ class DDPG(RL):
         return raw_action
 
     def get_input_size(self, num_actuators, policy_input, policy_output):
-        if BrainNN.GLOBAL_CONTROLLER:
-            return policy_input + policy_output
-        return num_actuators * (policy_input + policy_output)
+        # if BrainNN.GLOBAL_CONTROLLER:
+        #     return policy_input + policy_output
+        # return num_actuators * (policy_input + policy_output)
+        return policy_input + policy_output
 
     def update(self, policy_weights, buffer):
         # Make sure buffer has enough samples
@@ -110,7 +111,7 @@ class DDPG(RL):
         B, M, input_dim = normalized_sensor_inputs.shape
 
         # Concatenate all actuator states and actions per batch
-        critic_inputs = torch.cat([normalized_sensor_inputs.reshape(B, -1), raw_actions.reshape(B, -1)], dim=-1)
+        critic_inputs = torch.cat([normalized_sensor_inputs, raw_actions], dim=-1).reshape(B*M, -1)
         next_policy_actions = []
 
         with torch.no_grad():
@@ -118,9 +119,10 @@ class DDPG(RL):
                 next_hidden = F.relu(normalized_next_sensor_inputs[:, m, :] @ policy_weights['hidden_weights'] + policy_weights['hidden_biases'])
                 next_a = torch.sigmoid(next_hidden @ policy_weights['output_weights'] + policy_weights['output_biases'])
                 next_policy_actions.append(next_a)
-            next_policy_actions = torch.cat(next_policy_actions, dim=-1)  # (B, M*output_dim)
-            next_critic_inputs = torch.cat([normalized_next_sensor_inputs.reshape(B, -1), next_policy_actions], dim=-1)
-            target_q = rewards.squeeze(-1) + self.gamma * self.forward_target_critic(next_critic_inputs)
+            next_policy_actions = torch.cat(next_policy_actions)  # (B*M, output_dim)
+            next_critic_inputs = torch.cat([normalized_next_sensor_inputs.reshape(B*M, -1), next_policy_actions], dim=-1)
+            expanded_rewards = rewards.repeat_interleave(M, dim=0).squeeze(-1)
+            target_q = expanded_rewards + self.gamma * self.forward_target_critic(next_critic_inputs)
 
         # Predicted Q
         predicted_q = self.forward_critic(critic_inputs)
@@ -158,10 +160,11 @@ class DDPG(RL):
             hidden = F.relu(normalized_sensor_inputs[:, m, :] @ policy_weights['hidden_weights'] + policy_weights['hidden_biases'])
             a = torch.sigmoid(hidden @ policy_weights['output_weights'] + policy_weights['output_biases'])
             all_actions.append(a)
-        all_actions = torch.cat(all_actions, dim=-1)  # (B, M*output_dim)
+        all_actions = torch.cat(all_actions).reshape(B*M, -1)
+        normalized_sensor_inputs = normalized_sensor_inputs.reshape(B*M, -1)
 
         # Concatenate states and actions for global critic
-        critic_inputs = torch.cat([normalized_sensor_inputs.reshape(B, -1), all_actions], dim=-1)
+        critic_inputs = torch.cat([normalized_sensor_inputs, all_actions], dim=-1)
         policy_loss = -self.forward_critic(critic_inputs).mean()
 
         self.policy_optimizer.zero_grad()
