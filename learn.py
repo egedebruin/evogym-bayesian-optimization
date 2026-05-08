@@ -50,12 +50,6 @@ def learn(individual, rng, current_world):
 		logger.error(robot_body.grid)
 		return -math.inf, [], individual
 
-	rl_agent = None
-	if config.LEARN_METHOD == TYPE_DDPG:
-		rl_agent = DDPG(len(actuator_indices))
-	elif config.LEARN_METHOD == TYPE_PPO:
-		rl_agent = PPO(len(actuator_indices))
-
 	optimizer = CustomBayesianOptimization(
 		f=None,
 		pbounds=brain.get_p_bounds(actuator_indices),
@@ -68,9 +62,18 @@ def learn(individual, rng, current_world):
 
 	inherited_experience = brain.update_experience_with_actuator_indices(individual.inherited_experience, actuator_indices)
 
+	rl_agent = None
+	if config.LEARN_METHOD == TYPE_DDPG:
+		critic_values = None
+		if len(inherited_experience) > 0:
+			critic_values = brain.critic_next_point_to_critic_values(inherited_experience[0][2])
+		rl_agent = DDPG(len(actuator_indices), critic_values)
+	elif config.LEARN_METHOD == TYPE_PPO:
+		rl_agent = PPO(len(actuator_indices))
+
 	alphas = np.array([])
 	if config.INHERIT_SAMPLES == 0:
-		for experience_sample, objective_value in inherited_experience:
+		for experience_sample, objective_value, _ in inherited_experience:
 			alphas = np.append(alphas, config.LEARN_INHERITED_ALPHA)
 			optimizer.register(params=experience_sample, target=objective_value)
 			optimizer.set_gp_params(alpha=alphas)
@@ -103,7 +106,6 @@ def learn(individual, rng, current_world):
 			controller_values = brain.next_point_to_controller_values(best_brain, actuator_indices)
 			args = {k: torch.nn.Parameter(torch.tensor(v, dtype=torch.float32))
 					for k, v in controller_values.items()}
-			next_point = best_brain
 		elif config.LEARN_METHOD in RL_TYPES:
 			# Intermediate iteration
 			if config.LEARN_METHOD == TYPE_PPO and iteration % config.RL_EVALUATIONS_FREQUENCY == config.RL_EVALUATIONS_FREQUENCY - 1:
@@ -111,8 +113,6 @@ def learn(individual, rng, current_world):
 			else:
 				rl_agent.set_update_networks(True, True)
 			args = previous_policy
-			controller_values = {k: v.detach().numpy() for k, v in args.items()}
-			next_point = brain.controller_values_to_next_point(controller_values)
 		else:
 			raise NotImplementedError
 
@@ -122,9 +122,18 @@ def learn(individual, rng, current_world):
 		sensors = Sensors(robot_body.grid)
 
 		result = world.run_simulator(sim, controller, sensors, viewer, config.SIMULATION_LENGTH, True, individual.original_generation, transition_buffer)
+		previous_policy = controller.policy_weights
+		end_controller_values = {k: v.detach().numpy() for k, v in previous_policy.items()}
+		end_next_point = brain.controller_values_to_next_point(end_controller_values)
+
+		end_critic_next_point = None
+		if config.LEARN_METHOD in RL_TYPES:
+			critic_values = {k: v.detach().numpy() for k, v in rl_agent.critic_weights.items()}
+			end_critic_next_point = brain.critic_values_to_next_point(critic_values)
+
 		if result > objective_value:
 			objective_value = result
-			best_brain = next_point
+			best_brain = end_next_point
 			if iteration < config.INHERIT_SAMPLES and len(inherited_experience) > 0:
 				best_inherited_objective_value = result
 			if iteration == 0 and config.INHERIT_SAMPLES == -1:
@@ -134,8 +143,7 @@ def learn(individual, rng, current_world):
 			alphas = np.append(alphas, config.LEARN_ALPHA)
 			optimizer.register(params=next_point, target=result)
 			optimizer.set_gp_params(alpha=alphas)
-		experience.append((next_point, result))
-		previous_policy = controller.policy_weights
+		experience.append((end_next_point, result, end_critic_next_point))
 	sim.reset()
 	viewer.close()
 	return objective_value, best_brain, experience, best_inherited_objective_value, individual

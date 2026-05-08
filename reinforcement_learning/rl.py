@@ -16,8 +16,11 @@ class RL(ABC, nn.Module):
             raise KeyError(f"Missing parameter '{name}' in args")
         return nn.Parameter(args[name].detach().clone())
 
-    def __init__(self, num_actuators):
+    def __init__(self, num_actuators, critic_weights):
         super().__init__()
+
+        self.policy_optimizer = None
+        self.critic_optimizer = None
 
         self.critic_hidden_weights = None
         self.critic_hidden_biases = None
@@ -30,12 +33,24 @@ class RL(ABC, nn.Module):
         self.do_update_critic = False
         self.do_update_norm = True
 
-        args = {k: torch.nn.Parameter(torch.tensor(v, dtype=torch.float32))
-                for k, v in self.create_critic_params(num_actuators).items()}
-        self.policy_optimizer = None
-        self.critic_optimizer = None
+        if critic_weights is None:
+            args = {k: torch.nn.Parameter(torch.tensor(v, dtype=torch.float32))
+                    for k, v in self.create_critic_params(num_actuators).items()}
+        else:
+            args = {k: torch.nn.Parameter(torch.tensor(v, dtype=torch.float32))
+                    for k, v in critic_weights.items()}
+
         self.set_critic_parameters(args)
         self.set_critic_optimizer(self.critic_lr)
+
+        self.critic_weights = {
+            'hidden_weights': self.critic_hidden_weights,
+            'hidden_biases': self.critic_hidden_biases,
+            'hidden2_weights': self.critic_hidden2_weights,
+            'hidden2_biases': self.critic_hidden2_biases,
+            'output_weights': self.critic_output_weights,
+            'output_biases': self.critic_output_biases,
+        }
 
 
     def set_critic_optimizer(self, critic_lr):
@@ -84,9 +99,9 @@ class RL(ABC, nn.Module):
 
     def create_critic_params(self, num_actuators):
         policy_input_dim = BrainNN.NUMBER_OF_INPUT_NEURONS
-        hidden_dim1 = 128  # first hidden layer
-        hidden_dim2 = 64  # second hidden layer
-        policy_output_dim = 1  # Q-value
+        hidden_dim1 = BrainNN.CRITIC_HIDDEN1_DIM  # first hidden layer
+        hidden_dim2 = BrainNN.CRITIC_HIDDEN2_DIM  # second hidden layer
+        policy_output_dim = 1
         if BrainNN.GLOBAL_CONTROLLER:
             policy_output_dim = 25
         output_dim = 1 # Q-value

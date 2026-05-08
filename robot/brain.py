@@ -41,5 +41,15 @@ class Brain(ABC):
 
     @staticmethod
     @abstractmethod
+    def critic_next_point_to_critic_values(next_point):
+        pass
+
+    @staticmethod
+    @abstractmethod
     def controller_values_to_next_point(controller_values):
+        pass
+
+    @staticmethod
+    @abstractmethod
+    def critic_values_to_next_point(controller_values):
         pass

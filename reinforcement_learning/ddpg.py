@@ -10,13 +10,13 @@ from robot.brain_nn import BrainNN
 
 class DDPG(RL):
 
-    def __init__(self, num_actuators):
+    def __init__(self, num_actuators, critic_weights):
         self.gamma = 0.95
         self.policy_lr = 1e-4
         self.critic_lr = 1e-4
         self.tau = 0.01
 
-        super().__init__(num_actuators)
+        super().__init__(num_actuators, critic_weights)
 
         self.target_critic_hidden_weights = None
         self.target_critic_hidden_biases = None

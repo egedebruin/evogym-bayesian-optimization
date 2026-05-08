@@ -11,6 +11,8 @@ class BrainNN(Brain):
     NUMBER_OF_INPUT_NEURONS = int(3 * math.pow(2 * config.MODULAR_NEIGHBOUR_VISION + 1, 2) + 3)
     NUMBER_OF_HIDDEN_NEURONS = 10
     NUMBER_OF_OUTPUT_NEURONS = 1
+    CRITIC_HIDDEN1_DIM = 128
+    CRITIC_HIDDEN2_DIM = 64
     GLOBAL_CONTROLLER = False
     
     weights: dict
@@ -91,6 +93,46 @@ class BrainNN(Brain):
         return args
 
     @staticmethod
+    def critic_next_point_to_critic_values(next_point):
+        input_dim = BrainNN.NUMBER_OF_INPUT_NEURONS + 1
+        if BrainNN.GLOBAL_CONTROLLER:
+            input_dim = BrainNN.NUMBER_OF_INPUT_NEURONS + 25
+        args = {'critic_hidden_weights': np.zeros(shape=(input_dim, BrainNN.CRITIC_HIDDEN1_DIM)),
+                'critic_hidden_biases': np.zeros(shape=BrainNN.CRITIC_HIDDEN1_DIM),
+                'critic_hidden2_weights': np.zeros(shape=(BrainNN.CRITIC_HIDDEN1_DIM, BrainNN.CRITIC_HIDDEN2_DIM)),
+                'critic_hidden2_biases': np.zeros(shape=BrainNN.CRITIC_HIDDEN2_DIM),
+                'critic_output_weights': np.zeros(shape=(BrainNN.CRITIC_HIDDEN2_DIM, 1)),
+                'critic_output_biases': np.zeros(shape=1)}
+
+        for key, value in next_point.items():
+            if 'hidden-bias' in key:
+                position = key.split('_')[1]
+                args['critic_hidden_biases'][int(position)] = value
+                continue
+            if 'hidden2-bias' in key:
+                position = key.split('_')[1]
+                args['critic_hidden2_biases'][int(position)] = value
+                continue
+            if 'output-bias' in key:
+                position = key.split('_')[1]
+                args['critic_output_biases'][int(position)] = value
+                continue
+            if 'hidden_' in key:
+                position_0, position_1 = key.split('_')[1:]
+                args['critic_hidden_weights'][int(position_0)][int(position_1)] = value
+                continue
+            if 'hidden2' in key:
+                position_0, position_1 = key.split('_')[1:]
+                args['critic_hidden2_weights'][int(position_0)][int(position_1)] = value
+                continue
+            if 'output' in key:
+                position_0, position_1 = key.split('_')[1:]
+                args['critic_output_weights'][int(position_0)][int(position_1)] = value
+                continue
+
+        return args
+
+    @staticmethod
     def controller_values_to_next_point(controller_values):
         next_point = {}
         for position, value in enumerate(controller_values['hidden_biases'][0]):
@@ -108,6 +150,26 @@ class BrainNN(Brain):
                 adjusted_value = (value + 2) / 4
                 next_point[f'output_{position_0}_{position_1}'] = adjusted_value
 
+        return next_point
+
+    @staticmethod
+    def critic_values_to_next_point(critic_values):
+        next_point = {}
+        for position, value in enumerate(critic_values['hidden_biases']):
+            next_point[f'hidden-bias_{position}'] = value
+        for position, value in enumerate(critic_values['hidden2_biases']):
+            next_point[f'hidden-bias_{position}'] = value
+        for position, value in enumerate(critic_values['output_biases']):
+            next_point[f'output-bias_{position}'] = value
+        for position_0, nested_list in enumerate(critic_values['hidden_weights']):
+            for position_1, value in enumerate(nested_list):
+                next_point[f'hidden_{position_0}_{position_1}'] = value
+        for position_0, nested_list in enumerate(critic_values['hidden2_weights']):
+            for position_1, value in enumerate(nested_list):
+                next_point[f'hidden2_{position_0}_{position_1}'] = value
+        for position_0, nested_list in enumerate(critic_values['output_weights']):
+            for position_1, value in enumerate(nested_list):
+                next_point[f'output_{position_0}_{position_1}'] = value
         return next_point
 
     @staticmethod
