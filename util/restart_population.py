@@ -1,4 +1,5 @@
 import ast
+import pickle
 
 import numpy as np
 
@@ -24,12 +25,10 @@ def get_population():
                     all_individuals[ind_id] = tuple(parts[1:7])  # ✅ Only store relevant individuals
 
     # Step 3: Load all experience (still full file — can be optimized similarly if needed)
-    experience_file = open(config.FOLDER + "experience.txt", "r")
-    all_experience = {
-        parts[0]: parts[1]
-        for line in experience_file.read().splitlines()
-        if (parts := line.split(";")) and len(parts) >= 2
-    }
+    with open(config.FOLDER + "experience.pkl", "rb") as file:
+        ids, experiences = pickle.load(file)
+
+    all_experience = dict(zip(ids, experiences))
 
     population = []
     for individual_id in final_generation_ids:
@@ -40,7 +39,7 @@ def get_population():
         objective_value = float(all_individuals[individual_id][4])
         original_generation = int(all_individuals[individual_id][5])
 
-        experience = ast.literal_eval(all_experience[individual_id])
+        experience = all_experience[individual_id]
 
         body = Body()
         body.replace_grid(body_grid)
