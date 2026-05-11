@@ -1,4 +1,5 @@
 import numpy as np
+import pickle
 
 from configs import config
 from util.archive import Archive
@@ -13,9 +14,12 @@ def write_to_populations_file(population):
         for individual in population:
             file.write(f"{individual.id};")
         file.write("\n")
-    with open(config.FOLDER + "experience.txt", "w") as file:
+    with open(config.FOLDER + "experience.pkl", "wb") as file:
+        data = [[], []]
         for individual in population:
-            file.write(f"{individual.to_experience_string()}\n")
+            data[0].append(individual.id)
+            data[1].append(individual.experience)
+        pickle.dump(data, file, protocol=pickle.HIGHEST_PROTOCOL)
 
 def write_to_archive_file(archive: Archive):
     with open(config.FOLDER + "populations.txt", "a") as file:
@@ -24,11 +28,14 @@ def write_to_archive_file(archive: Archive):
                 if individual is not None:
                     file.write(f"{individual.id};")
         file.write("\n")
-    with open(config.FOLDER + "experience.txt", "w") as file:
+    with open(config.FOLDER + "experience.pkl", "wb") as file:
+        data = [[], []]
         for row in archive.archive:
             for individual in row:
                 if individual is not None:
-                    file.write(f"{individual.to_experience_string()}\n")
+                    data[0].append(individual.id)
+                    data[1].append(individual.experience)
+        pickle.dump(data, file, protocol=pickle.HIGHEST_PROTOCOL)
 
 def write_to_rng_file(rng):
     rng_state = rng.bit_generator.state
