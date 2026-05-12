@@ -60,7 +60,7 @@ class Individual:
             sorted(ind.experience, key=lambda x: x[1], reverse=True)
             for ind in selected_individuals
         ]
-        for i in range(config.LEARN_ITERATIONS):
+        for i in range(config.INHERIT_SAMPLES):
             for j in range(config.SOCIAL_POOL):
                 if pre_sorted_experiences[j][i][0] not in [exp[0] for exp in self.inherited_experience]:
                     self.inherited_experience.append(pre_sorted_experiences[j][i])

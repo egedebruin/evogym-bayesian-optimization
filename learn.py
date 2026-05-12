@@ -138,6 +138,7 @@ def learn(individual, rng, current_world):
 		previous_policy = controller.policy_weights
 	sim.reset()
 	viewer.close()
+	experience = sorted(experience, key=lambda x: x[1], reverse=True)[:config.INHERIT_SAMPLES]
 	return objective_value, best_brain, experience, best_inherited_objective_value, individual
 
 def get_next_point_from_inheritance(iteration, optimizer, brain, actuator_indices, inherited_experience):
