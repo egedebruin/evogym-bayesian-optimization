@@ -103,7 +103,6 @@ def learn(individual, rng, current_world):
 			controller_values = brain.next_point_to_controller_values(best_brain, actuator_indices)
 			args = {k: torch.nn.Parameter(torch.tensor(v, dtype=torch.float32))
 					for k, v in controller_values.items()}
-			next_point = best_brain
 		elif config.LEARN_METHOD in RL_TYPES:
 			# Intermediate iteration
 			if config.LEARN_METHOD == TYPE_PPO and iteration % config.RL_EVALUATIONS_FREQUENCY == config.RL_EVALUATIONS_FREQUENCY - 1:
@@ -111,8 +110,6 @@ def learn(individual, rng, current_world):
 			else:
 				rl_agent.set_update_networks(True, True)
 			args = previous_policy
-			controller_values = {k: v.detach().numpy() for k, v in args.items()}
-			next_point = brain.controller_values_to_next_point(controller_values)
 		else:
 			raise NotImplementedError
 
@@ -122,9 +119,12 @@ def learn(individual, rng, current_world):
 		sensors = Sensors(robot_body.grid)
 
 		result = world.run_simulator(sim, controller, sensors, viewer, config.SIMULATION_LENGTH, True, individual.original_generation, transition_buffer)
+		previous_policy = controller.policy_weights
+		end_next_point = brain.controller_values_to_next_point({k: v.detach().numpy() for k, v in previous_policy.items()})
+
 		if result > objective_value:
 			objective_value = result
-			best_brain = next_point
+			best_brain = end_next_point
 			if iteration < config.INHERIT_SAMPLES and len(inherited_experience) > 0:
 				best_inherited_objective_value = result
 			if iteration == 0 and config.INHERIT_SAMPLES == -1:
@@ -134,8 +134,7 @@ def learn(individual, rng, current_world):
 			alphas = np.append(alphas, config.LEARN_ALPHA)
 			optimizer.register(params=next_point, target=result)
 			optimizer.set_gp_params(alpha=alphas)
-		experience.append((next_point, result))
-		previous_policy = controller.policy_weights
+		experience.append((end_next_point, result))
 	sim.reset()
 	viewer.close()
 	experience = sorted(experience, key=lambda x: x[1], reverse=True)[:config.INHERIT_SAMPLES]
