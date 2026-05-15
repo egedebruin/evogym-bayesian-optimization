@@ -75,10 +75,8 @@ def learn(individual, rng, current_world):
 			optimizer.register(params=experience_sample, target=objective_value)
 			optimizer.set_gp_params(alpha=alphas)
 
-	objective_value = -math.inf
-	best_brain = None
 	previous_policy = None
-	best_inherited_objective_value = -math.inf
+	inherited_objective_values = []
 	experience = []
 	transition_buffer = deque(maxlen=2000)
 	for iteration in range(config.LEARN_ITERATIONS):
@@ -100,6 +98,7 @@ def learn(individual, rng, current_world):
 		elif config.LEARN_METHOD in RL_TYPES and iteration + 1 == config.LEARN_ITERATIONS:
 			# Last iteration
 			rl_agent.set_update_networks(False, False)
+			best_brain = max(experience, key=lambda x: x[1])[0]
 			controller_values = brain.next_point_to_controller_values(best_brain, actuator_indices)
 			args = {k: torch.nn.Parameter(torch.tensor(v, dtype=torch.float32))
 					for k, v in controller_values.items()}
@@ -122,13 +121,9 @@ def learn(individual, rng, current_world):
 		previous_policy = controller.policy_weights
 		end_next_point = brain.controller_values_to_next_point({k: v.detach().numpy() for k, v in previous_policy.items()})
 
-		if result > objective_value:
-			objective_value = result
-			best_brain = end_next_point
-			if iteration < config.INHERIT_SAMPLES and len(inherited_experience) > 0:
-				best_inherited_objective_value = result
-			if iteration == 0 and config.INHERIT_SAMPLES == -1:
-				best_inherited_objective_value = result
+		if (iteration < config.INHERIT_SAMPLES and len(inherited_experience) > 0) or (
+				iteration == 0 and config.INHERIT_SAMPLES == -1):
+			inherited_objective_values.append(result)
 
 		if config.LEARN_METHOD == TYPE_BO and not config.RANDOM_LEARNING:
 			alphas = np.append(alphas, config.LEARN_ALPHA)
@@ -138,7 +133,7 @@ def learn(individual, rng, current_world):
 	sim.reset()
 	viewer.close()
 	experience = sorted(experience, key=lambda x: x[1], reverse=True)[:config.INHERIT_SAMPLES]
-	return objective_value, best_brain, experience, best_inherited_objective_value, individual
+	return experience, inherited_objective_values, individual
 
 def get_next_point_from_inheritance(iteration, optimizer, brain, actuator_indices, inherited_experience):
 	if iteration == 0 and config.INHERIT_SAMPLES == -1 and config.DARWINIAN:
