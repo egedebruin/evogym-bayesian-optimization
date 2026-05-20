@@ -30,7 +30,27 @@ class Body:
                     grid_size += 1
         return grid_size
 
+    def mutate_the_second(self, rng: np.random.Generator):
+        number_of_changes = rng.integers(config.MIN_MUTATION, config.MAX_MUTATION + 1)
+        for _ in range(number_of_changes):
+            choices = ['change']
+            if self.grid_size() + 1 <= config.MAX_SIZE:
+                choices.append('add')
+            if self.grid_size() - 1 >= config.MIN_SIZE:
+                choices.append('delete')
+
+            choice = rng.choice(choices)
+            if choice == 'add':
+                self.add_mutation(rng)
+            elif choice == 'delete':
+                self.delete_mutation(rng)
+            else:
+                self.change_mutation(rng)
+
     def mutate(self, rng: np.random.Generator):
+        if config.MIN_MUTATION > 0:
+            self.mutate_the_second(rng)
+            return
         success = False
         while not success:
             choice = rng.random()
