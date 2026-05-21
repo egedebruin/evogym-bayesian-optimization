@@ -132,10 +132,8 @@ def learn(individual, rng, current_world):
 		experience.append((end_next_point, result))
 	sim.reset()
 	viewer.close()
-	experience = sorted(experience, key=lambda x: x[1], reverse=True)[:config.INHERIT_SAMPLES]
 
-	if config.INHERIT_SAMPLES < 0:
-		experience = []
+	experience = sorted(experience, key=lambda x: x[1], reverse=True)[:max(config.INHERIT_SAMPLES, 1)]
 
 	return experience, inherited_objective_values, individual
 
