@@ -133,6 +133,10 @@ def learn(individual, rng, current_world):
 	sim.reset()
 	viewer.close()
 	experience = sorted(experience, key=lambda x: x[1], reverse=True)[:config.INHERIT_SAMPLES]
+
+	if config.INHERIT_SAMPLES < 0:
+		experience = []
+
 	return experience, inherited_objective_values, individual
 
 def get_next_point_from_inheritance(iteration, optimizer, brain, actuator_indices, inherited_experience):
