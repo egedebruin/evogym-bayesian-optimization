@@ -1,5 +1,6 @@
 from configs import config
 from individual import Individual
+from robot.body import Body
 import numpy as np
 
 
@@ -48,7 +49,7 @@ class Archive:
 
     def get_most_similar(self, individual: Individual, amount: int):
         all_individuals = self.get_all_individuals()
-        return sorted(all_individuals, key=lambda ind: Individual.hamming_distance(individual.body.grid, ind.body.grid))[:amount]
+        return sorted(all_individuals, key=lambda ind: Body.hamming_distance(individual.body.grid, ind.body.grid))[:amount]
 
     def get_best(self, amount: int):
         all_individuals = self.get_all_individuals()

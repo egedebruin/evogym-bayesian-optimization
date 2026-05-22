@@ -1,9 +1,6 @@
 import math
 from copy import deepcopy
 
-import numpy as np
-from scipy.ndimage import shift
-
 from configs import config
 from robot.body import Body
 from robot.active import Brain
@@ -80,7 +77,7 @@ class Individual:
         elif config.INHERIT_TYPE == 'random':
             selected_individuals = rng.choice(population, size=config.SOCIAL_POOL, replace=False).tolist()
         elif config.INHERIT_TYPE == 'similar':
-            selected_individuals = sorted(population, key=lambda ind: Individual.hamming_distance(self.body.grid, ind.body.grid))[:config.SOCIAL_POOL]
+            selected_individuals = sorted(population, key=lambda ind: Body.hamming_distance(self.body.grid, ind.body.grid))[:config.SOCIAL_POOL]
         elif config.INHERIT_TYPE == 'cell':
             if archive is None:
                 raise ValueError("Invalid INHERIT TYPE: cell. Archive is none.")
@@ -97,39 +94,3 @@ class Individual:
             raise ValueError(f"Unknown INHERIT TYPE: {config.INHERIT_TYPE}")
 
         self.do_the_inherit(selected_individuals)
-
-
-    @staticmethod
-    def hamming_distance(A, B):
-        A = np.array(A)
-        B = np.array(B)
-        gl = config.GRID_LENGTH
-
-        A_non_zero = np.count_nonzero(A)
-        B_non_zero = np.count_nonzero(B)
-
-        min_dist = np.inf
-        shifts = range(-gl + 1, gl)
-
-        for dx_a in shifts:
-            A_shifted = shift(A, shift=(dx_a, 0), order=0, cval=0)
-            for dy_a in shifts:
-                A_final = shift(A_shifted, shift=(0, dy_a), order=0, cval=0)
-
-                A_nz = np.count_nonzero(A_final)
-                if A_nz != A_non_zero:
-                    continue
-
-                for dx_b in shifts:
-                    B_shifted = shift(B, shift=(dx_b, 0), order=0, cval=0)
-                    for dy_b in shifts:
-                        B_final = shift(B_shifted, shift=(0, dy_b), order=0, cval=0)
-
-                        B_nz = np.count_nonzero(B_final)
-                        if B_nz != B_non_zero:
-                            continue
-
-                        dist = np.count_nonzero(A_final != B_final)
-                        min_dist = min(min_dist, dist)
-
-        return min_dist

@@ -1,4 +1,7 @@
+from copy import copy
+
 import numpy as np
+from scipy.ndimage import shift
 
 from configs import config
 
@@ -49,7 +52,13 @@ class Body:
 
     def mutate(self, rng: np.random.Generator):
         if config.MIN_MUTATION > 0:
-            self.mutate_the_second(rng)
+            old_grid = copy(self.grid)
+
+            while Body.hamming_distance(old_grid, self.grid) < config.MIN_MUTATION:
+                self.grid = copy(old_grid)
+                self.mutate_the_second(rng)
+            print(Body.hamming_distance(old_grid, self.grid))
+
             return
         success = False
         while not success:
@@ -185,3 +194,38 @@ class Body:
 
         # Check if all 1-4 values were visited
         return np.all((grid < 1) | (grid > 4) | visited)
+
+    @staticmethod
+    def hamming_distance(A, B):
+        A = np.array(A)
+        B = np.array(B)
+        gl = config.GRID_LENGTH
+
+        A_non_zero = np.count_nonzero(A)
+        B_non_zero = np.count_nonzero(B)
+
+        min_dist = np.inf
+        shifts = range(-gl + 1, gl)
+
+        for dx_a in shifts:
+            A_shifted = shift(A, shift=(dx_a, 0), order=0, cval=0)
+            for dy_a in shifts:
+                A_final = shift(A_shifted, shift=(0, dy_a), order=0, cval=0)
+
+                A_nz = np.count_nonzero(A_final)
+                if A_nz != A_non_zero:
+                    continue
+
+                for dx_b in shifts:
+                    B_shifted = shift(B, shift=(dx_b, 0), order=0, cval=0)
+                    for dy_b in shifts:
+                        B_final = shift(B_shifted, shift=(0, dy_b), order=0, cval=0)
+
+                        B_nz = np.count_nonzero(B_final)
+                        if B_nz != B_non_zero:
+                            continue
+
+                        dist = np.count_nonzero(A_final != B_final)
+                        min_dist = min(min_dist, dist)
+
+        return min_dist
