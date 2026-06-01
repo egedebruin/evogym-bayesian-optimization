@@ -1,6 +1,5 @@
 import numpy as np
 import matplotlib.pyplot as plt
-import pandas as pd
 import seaborn as sns
 from matplotlib import rcParams
 import plot
@@ -9,7 +8,7 @@ import plot
 POP_SIZE = 100
 EVALS_PER_GEN = 50
 REPETITIONS = 20
-SUB_FOLDER = 'new_paper'
+SUB_FOLDER = ''
 
 LABELS = {
     (-1, 'none', 0): 'Darwinian',
@@ -27,6 +26,7 @@ COLORS = {
     (-1, 'none', 0): 'red',
     (8, 'best', 1): 'black',
     (8, 'best', 8): 'grey',
+    (1, 'parent', 1): 'orange',
     (8, 'parent', 1): 'orange',
     (8, 'random', 1): 'blue',
     (8, 'random', 8): 'cyan',
@@ -69,37 +69,47 @@ def make_the_plot(inherit, inherit_type, inherit_pool, environment, ax, learn_me
             out[i] = np.mean(x[start:end])
         return out
 
-    extra = f"_changing-{environment}"
+    def downsample_mean(x, w):
+        x = np.asarray(x)
+        return np.array([
+            np.mean(x[i:i + w]) for i in range(0, len(x), w)
+        ])
+
+    extra = ""
+    if environment == 'changing':
+        extra += f"_changing-1.0"
+    extra += f"_vision-2"
+    # extra += f"_vision-{learn_method}"
     # if environment[0] != 0:
     #     extra += f"_minmutation-{environment[0]}"
     # extra += f"_maxmutation-{environment[1]}"
+    # extra += "_short-1"
     # extra = f"_changedegree-{environment}"
 
-    GENERATIONS = 100
+    GENERATIONS = 60
     key = (inherit, inherit_type, inherit_pool)
-    # label = LABELS.get(key)
-    # color = COLORS.get(key)
-    label = f'{LEARN_METHOD_TO_LABEL.get(learn_method)}, {LABELS.get(key)}'
-    color = LEARN_METHOD_TO_COLOR.get(learn_method)
+    label = LABELS.get(key)
+    color = COLORS.get(key)
+    # label = f'{LEARN_METHOD_TO_LABEL.get(learn_method)}, {LABELS.get(key)}'
+    # color = LEARN_METHOD_TO_COLOR.get(learn_method)
 
     if label is None or color is None:
         return  # skip unknown combinations
 
     curves = []
     for repetition in range(1, REPETITIONS + 1):
-        data_path = f'results/learn-{EVALS_PER_GEN}_inherit-{inherit}_type-{inherit_type}_pool-{inherit_pool}_environment-changing_method-{learn_method}{extra}_repetition-{repetition}'
+        data_path = f'results/{SUB_FOLDER}/learn-{EVALS_PER_GEN}_inherit-{inherit}_type-{inherit_type}_pool-{inherit_pool}_environment-{environment}_method-{learn_method}{extra}_repetition-{repetition}'
         data_array = plot.get_data(data_path, GENERATIONS)
 
         if data_array is None:
             continue
         if len(data_array) < GENERATIONS:
-            print(f'No data found for {environment}, {inherit}, {inherit_type}, {inherit_pool}, {repetition}')
+            print(f'No data found for {data_path}')
             print(len(data_array)) if data_array is not None else print("None")
             print()
             continue
 
         mean_vals = np.nanmean(data_array, axis=1)
-        running_max = np.maximum.accumulate(mean_vals)
         curves.append(mean_vals)
 
     if not curves:
@@ -112,25 +122,15 @@ def make_the_plot(inherit, inherit_type, inherit_pool, environment, ax, learn_me
     q75 = np.percentile(curves, 75, axis=0)
     x_vals = np.arange(1, GENERATIONS + 1) * EVALS_PER_GEN * POP_SIZE
 
-    window = 4
+    window = 1
 
-    mean_vals = smooth(mean_vals, window)
-    q25 = smooth(q25, window)
-    q75 = smooth(q75, window)
-    x_vals = smooth(x_vals, window)
-
-    label = f'{LEARN_METHOD_TO_LABEL.get(learn_method)}{LABELS.get(key)}'
-    result_dict = {
-        'cat': [label for _ in range(50)],
-        'x': [x*2 for x in range(50)],
-        'y': mean_vals,
-        'ymin': q25,
-        'ymax': q75
-    }
-    pd.DataFrame(result_dict).to_csv(f'{environment}-{label}.txt', index=False, sep='\t')
+    mean_vals = downsample_mean(mean_vals, window)
+    q25 = downsample_mean(q25, window)
+    q75 = downsample_mean(q75, window)
+    x_vals = downsample_mean(x_vals, window)
 
     ax.plot(x_vals, mean_vals, label=label, color=color, linestyle=LINE_STYLES.get(key))
-    ax.fill_between(x_vals, q25, q75, color=color, alpha=0.2)
+    ax.fill_between(x_vals, q25, q75, color=color, alpha=0.1)
 
 
 def main():
@@ -148,7 +148,7 @@ def main():
         "lines.linewidth": 2.2
     })
 
-    environments = ['1e-06', '0.1', '0.2', '0.4', '1']
+    environments = ['simple', 'changing']
     strategy_keys = list(LABELS.keys())  # 6 total strategies
 
     fig, axes = plt.subplots(nrows=max(2, len(environments)), figsize=(10, 10), sharey=False)
@@ -157,11 +157,11 @@ def main():
     for i, env in enumerate(environments):
         ax = axes[i]
         for idx, key in enumerate(strategy_keys):
-            for learn_method in ['ddpg', 'bo']:
+            for learn_method in ['ddpg']:
                 make_the_plot(*key, env, ax, learn_method)
         name = 'Changing-0' if env == 'changing-1e-07' else (
             'Bidirectional with direction sensor' if env == 'bidirectional2' else (
-            'Bidirectional without direction sensor' if env == 'bidirectional' else env.capitalize()
+            'Bidirectional without direction sensor' if env == 'bidirectional' else env
             )
         )
         ax.set_title(f"Environment: {name}", weight='bold', pad=15)
@@ -170,11 +170,11 @@ def main():
             ax.set_ylabel("Fitness")
 
     # Global legend outside plots
-    handles, labels = axes[0].get_legend_handles_labels()
+    handles, labels = axes[1].get_legend_handles_labels()
     fig.legend(handles, labels, loc='center right', title="Strategy", frameon=False)
 
     plt.tight_layout(rect=[0, 0, 0.75, 1])  # Leave room for legend
-    # plt.show()
+    plt.show()
     # plt.savefig(f'plot.pdf')
 
 
