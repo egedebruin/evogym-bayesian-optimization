@@ -7,29 +7,40 @@ parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 sys.path.insert(0, parent_dir)
 from configs import config
 
-def get_data(folder, max_generations = -1):
+def get_data(folder, max_generations=-1):
     if not os.path.isdir(folder):
         return None
-    if not os.path.isfile(os.path.join(folder, "individuals.txt")):
+    individuals_path = os.path.join(folder, "individuals.txt")
+    if not os.path.isfile(individuals_path):
         return None
-    individuals_file = open(folder + "/individuals.txt", "r")
-    all_individuals = {individual.split(";")[0]: float(individual.split(";")[5]) for individual in individuals_file.read().splitlines()}
 
-    populations_file = open(folder + "/populations.txt", "r")
-    generations = populations_file.read().splitlines()
+    # Read individuals file line by line (memory-safe)
+    all_individuals = {}
+    with open(individuals_path, "r") as f:
+        for line in f:
+            parts = line.strip().split(";")
+            if len(parts) > 5:
+                all_individuals[parts[0]] = float(parts[5])
+
+    populations_path = os.path.join(folder, "populations.txt")
+    if not os.path.isfile(populations_path):
+        return None
 
     objective_values_per_generation = []
-    i = 1
-    for generation in generations:
-        if max_generations != -1 and i > max_generations:
-            break
-        i += 1
-        generation_objective_values = []
-        for individual in generation.split(";")[:-1]:
-            generation_objective_values.append(all_individuals[individual])
-        objective_values_per_generation.append(generation_objective_values)
 
-    # Convert to numpy array for easy computation
+    # Also stream populations file instead of reading all at once
+    with open(populations_path, "r") as f:
+        for i, line in enumerate(f, start=1):
+            if max_generations != -1 and i > max_generations:
+                break
+
+            generation_objective_values = []
+            for individual in line.strip().split(";")[:-1]:
+                if individual in all_individuals:
+                    generation_objective_values.append(all_individuals[individual])
+
+            objective_values_per_generation.append(generation_objective_values)
+
     return np.array(objective_values_per_generation)
 
 def main():
