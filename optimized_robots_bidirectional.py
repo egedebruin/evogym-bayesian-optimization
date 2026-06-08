@@ -18,13 +18,15 @@ from robot.brain_nn import BrainNN
 config.FOLDER = ''
 logger_setup()
 
-config.OFFSPRING_SIZE = 100
+config.OFFSPRING_SIZE = 50
 config.MIN_MUTATION = 0
 config.MAX_MUTATION = 2
-config.PARALLEL_PROCESSES = 100
+config.PARALLEL_PROCESSES = 50
 config.LEARN_ITERATIONS = 100
 config.GLOBAL_CONTROLLER = False
 config.MODULAR_NEIGHBOUR_VISION = 2
+config.ENVIRONMENT = 'bidirectional'
+config.LEARN_METHOD = 'ddpg'
 
 BrainNN.set_modular_vision()
 
@@ -37,6 +39,9 @@ results = {
 for inherit in [(-1, 'none', 0), (1, 'parent', 1)]:
     for repetition in range(1, 21):
         config.FOLDER = f'results/learn-100_inherit-{inherit[0]}_type-{inherit[1]}_pool-{inherit[2]}_environment-bidirectional_method-ddpg_vision-2_repetition-{repetition}/'
+        config.INHERIT_SAMPLES = inherit[0]
+        config.INHERIT_TYPE = inherit[1]
+        config.SOCIAL_POOL = inherit[2]
 
         population, generation_index = restart_population.get_population()
         rng = restart_population.get_rng()
