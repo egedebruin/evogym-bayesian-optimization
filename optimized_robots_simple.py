@@ -18,16 +18,17 @@ from robot.brain_nn import BrainNN
 config.FOLDER = ''
 logger_setup()
 
-config.OFFSPRING_SIZE = 50
+config.OFFSPRING_SIZE = 100
 config.MIN_MUTATION = 0
-config.MAX_MUTATION = 2
-config.PARALLEL_PROCESSES = 50
+config.MAX_MUTATION = 0
+config.PARALLEL_PROCESSES = 100
 config.LEARN_ITERATIONS = 100
 config.GLOBAL_CONTROLLER = False
 config.MODULAR_NEIGHBOUR_VISION = 2
 config.ENVIRONMENT = 'simple'
 config.LEARN_METHOD = 'ddpg'
 config.DARWINIAN = False
+config.PARENT_SELECTION = 'elitist'
 
 BrainNN.set_modular_vision()
 
@@ -46,7 +47,7 @@ for inherit in [(-1, 'none', 0), (1, 'parent', 1)]:
 
         population, generation_index = restart_population.get_population()
         rng = restart_population.get_rng()
-        parent_selection = Selection(config.OFFSPRING_SIZE, config.PARENT_SELECTION, {'pool_size': config.PARENT_POOL})
+        parent_selection = Selection(config.OFFSPRING_SIZE, config.PARENT_SELECTION)
         offspring = get_offspring(population, generation_index, parent_selection, rng)
         evaluated_offspring, _ = run_generation(offspring, None, rng)
 
