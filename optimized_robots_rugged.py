@@ -15,6 +15,7 @@ from main import get_offspring, run_generation
 from selection import Selection
 from robot.brain_nn import BrainNN
 
+config.FOLDER = ''
 logger_setup()
 
 config.OFFSPRING_SIZE = 100
