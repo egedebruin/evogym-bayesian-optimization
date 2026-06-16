@@ -15,7 +15,6 @@ from main import get_offspring, run_generation
 from selection import Selection
 from robot.brain_nn import BrainNN
 
-config.FOLDER = ''
 logger_setup()
 
 config.OFFSPRING_SIZE = 100
@@ -36,19 +35,25 @@ results = {
     'inherit': [],
     'repetition': [],
     'individual': [],
-    'values': [],
+    'body': [],
 }
 for inherit in [(-1, 'none', 0), (1, 'parent', 1)]:
     for repetition in range(1, 21):
-        config.FOLDER = f'results/learn-50_inherit-{inherit[0]}_type-{inherit[1]}_pool-{inherit[2]}_environment-bidirectional_method-ddpg_vision-2_repetition-{repetition}/'
+        config.FOLDER = f'../results/learn-50_inherit-{inherit[0]}_type-{inherit[1]}_pool-{inherit[2]}_environment-bidirectional_method-ddpg_vision-2_repetition-{repetition}/'
         config.INHERIT_SAMPLES = -1
         config.INHERIT_TYPE = 'none'
         config.SOCIAL_POOL = 0
 
         population, generation_index = restart_population.get_population()
+        for i, individual in enumerate(population):
+            results['inherit'].append(inherit[0])
+            results['repetition'].append(repetition)
+            results['individual'].append(i)
+            results['body'].append(individual.body.grid)
+        break
         rng = restart_population.get_rng()
         parent_selection = Selection(config.OFFSPRING_SIZE, config.PARENT_SELECTION)
-        offspring = get_offspring(population, generation_index , parent_selection, rng)
+        offspring = get_offspring(population, generation_index, parent_selection, rng)
         evaluated_offspring, _ = run_generation(offspring, None, rng)
 
         for i, individual in enumerate(evaluated_offspring):
@@ -57,5 +62,5 @@ for inherit in [(-1, 'none', 0), (1, 'parent', 1)]:
             results['individual'].append(i)
             results['values'].append([value for _, value in individual.experience])
 
-with open("results/bidirectional-delta-results.pkl", "wb") as f:
+with open("results/bidirectional-bodies.pkl", "wb") as f:
     pickle.dump(results, f)
