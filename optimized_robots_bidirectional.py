@@ -51,7 +51,7 @@ for inherit in [(-1, 'none', 0), (1, 'parent', 1)]:
             results['repetition'].append(repetition)
             results['individual'].append(i)
             results['body'].append(individual.body.grid)
-        break
+        continue
         rng = restart_population.get_rng()
         parent_selection = Selection(config.OFFSPRING_SIZE, config.PARENT_SELECTION)
         offspring = get_offspring(population, generation_index, parent_selection, rng)
