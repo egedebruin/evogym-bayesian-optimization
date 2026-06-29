@@ -1,5 +1,7 @@
 import os
 
+from individual import Individual
+
 # Force single-threaded execution
 # DO THIS BEFORE IMPORTS
 os.environ["OMP_NUM_THREADS"] = "1"       # OpenMP
@@ -35,8 +37,9 @@ BrainNN.set_modular_vision()
 results = {
     'inherit': [],
     'repetition': [],
-    'individual': [],
+    'values': [],
     'body': [],
+    'controller': []
 }
 for inherit in [(-1, 'none', 0), (1, 'parent', 1)]:
     for repetition in range(1, 21):
@@ -46,12 +49,12 @@ for inherit in [(-1, 'none', 0), (1, 'parent', 1)]:
         config.SOCIAL_POOL = 0
 
         population, generation_index = restart_population.get_population()
-        for i, individual in enumerate(population):
-            results['inherit'].append(inherit[0])
-            results['repetition'].append(repetition)
-            results['individual'].append(i)
-            results['body'].append(individual.body.grid)
-        continue
+        # for i, individual in enumerate(population):
+        #     results['inherit'].append(inherit[0])
+        #     results['repetition'].append(repetition)
+        #     results['individual'].append(i)
+        #     results['body'].append(individual.body.grid)
+        # continue
         rng = restart_population.get_rng()
         parent_selection = Selection(config.OFFSPRING_SIZE, config.PARENT_SELECTION)
         offspring = get_offspring(population, generation_index, parent_selection, rng)
@@ -60,8 +63,9 @@ for inherit in [(-1, 'none', 0), (1, 'parent', 1)]:
         for i, individual in enumerate(evaluated_offspring):
             results['inherit'].append(inherit[0])
             results['repetition'].append(repetition)
-            results['individual'].append(i)
+            results['body'].append(individual.body.grid)
+            results['controller'].append(individual.best_brain)
             results['values'].append([value for _, value in individual.experience])
 
-with open("results/simple-bodies.pkl", "wb") as f:
+with open("results/simple-from-scratch-qualitative.pkl", "wb") as f:
     pickle.dump(results, f)
