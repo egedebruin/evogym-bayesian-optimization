@@ -103,7 +103,7 @@ class Archive:
         return (body > 0).sum() / convex_hull.sum()
 
     @staticmethod
-    def elongation(body: np.ndarray, n_directions=10) -> float:
+    def elongation(body: np.ndarray, n_directions=20) -> float:
         if n_directions <= 0:
             raise ValueError("n_directions must be positive")
         diameters = []
