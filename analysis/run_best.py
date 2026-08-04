@@ -12,6 +12,7 @@ from configs import config
 from util import world
 from util import start
 from robot.active import Brain
+from robot.brain_nn import BrainNN
 from robot.active import Controller
 from robot.sensors import Sensors
 from main import set_number_of_sensors
@@ -42,6 +43,7 @@ def get_best_individual(folder, min_generation=0):
 
 
 def main():
+    BrainNN.set_modular_vision()
     best_individual = get_best_individual(config.FOLDER)
 
     grid = np.array(ast.literal_eval(best_individual[1]))

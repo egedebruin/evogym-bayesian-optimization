@@ -146,7 +146,7 @@ def tracker(viewer):
     if config.ENVIRONMENT in ['carry', 'catch']:
         viewer.track_objects('package', 'robot')
     else:
-        viewer.track_objects('ground')
+        viewer.track_objects('robot')
 
 def add_extra_attributes(world, rng):
     if config.ENVIRONMENT == 'catch':
