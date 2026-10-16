@@ -68,7 +68,6 @@ def load_initial_population_from_json(json_path, rng):
 def main():
     parser = argparse.ArgumentParser(description='Evolve robots from robots.json using DDPG.')
     parser.add_argument('--generations', type=int, default=50, help='Number of generations to evolve.')
-    parser.add_argument('--learn-iterations', type=int, default=50, help='Number of learning iterations per individual.')
     parser.add_argument('--env', type=str, default='simple', help='Environment to use.')
     parser.add_argument('--robots-json', type=str, default='../IN5490-evogym-builder/experiments/robots.json', help='Path to robots.json file.')
     parser.add_argument('--repetition', type=int, default=1, help='Repetition number for output folder.')
@@ -76,21 +75,13 @@ def main():
     args = parser.parse_args()
     
     # Set up config based on arguments
-    config.LEARN_ITERATIONS = args.learn_iterations
     config.ENVIRONMENT = args.env
-    config.LEARN_METHOD = 'ddpg'
     config.READ_ARGS = False # We handle args here
-    
-    # Custom folder name
-    config.FOLDER = f"in5490/evolve/"
     
     if not os.path.exists(config.FOLDER):
         os.makedirs(config.FOLDER)
     
     logger_setup()
-    
-    # Initialize brain settings
-    BrainNN.set_modular_vision()
         
     rng = start.make_rng_seed()
     

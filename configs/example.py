@@ -1,14 +1,14 @@
-FOLDER = 'results/test/'
+FOLDER = "in5490/evolve/"
 
-READ_ARGS = True
+READ_ARGS = False
 LEARN_ITERATIONS = 10
-INHERIT_SAMPLES = 2 # from -1 to LEARN_ITERATIONS
+INHERIT_SAMPLES = -1 # from -1 to LEARN_ITERATIONS
 ENVIRONMENT = 'simple'
-INHERIT_TYPE = 'best' # parent, random, none, similar, cell, best
-SOCIAL_POOL = 8
-LEARN_METHOD = 'bo'
+INHERIT_TYPE = 'none' # parent, random, none, similar, cell, best
+SOCIAL_POOL = 0
+LEARN_METHOD = 'ddpg'
 GLOBAL_CONTROLLER = False
-MODULAR_NEIGHBOUR_VISION = 1
+MODULAR_NEIGHBOUR_VISION = 2
 
 DARWINIAN = True
 RANDOM_LEARNING = False
@@ -31,9 +31,9 @@ PARALLEL_PROCESSES = 100
 # generational, elitist, tournament
 SURVIVOR_SELECTION = 'generational'
 PARENT_SELECTION = 'tournament'
-CONTROLLER_TYPE = 'sine' # sine, nn
+CONTROLLER_TYPE = 'nn' # sine, nn
 
-MAP_ELITES = True
+MAP_ELITES = False
 DESCRIPTORS = ['relative_activity', 'elongation'] # relative_activity, elongation, compactness
 # now we support exactly two descriptors
 MAP_GRID_SIZE = 30
